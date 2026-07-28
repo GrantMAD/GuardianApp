@@ -1,0 +1,70 @@
+import React from 'react';
+import { Tabs } from 'expo-router';
+import { Text, View } from 'react-native';
+
+function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+  return (
+    <View className="items-center justify-center pt-1">
+      <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
+      <Text
+        style={{
+          fontSize: 10,
+          marginTop: 2,
+          fontWeight: focused ? '700' : '500',
+          color: focused ? '#7C6AF5' : '#9090A8',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+export default function ParentLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: '#1A1A24',
+          borderTopColor: '#2A2A3E',
+          borderTopWidth: 1,
+          height: 64,
+          paddingBottom: 8,
+        },
+        tabBarShowLabel: false,
+      }}
+    >
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" label="Dashboard" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="apps"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📱" label="Apps" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="rules"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" label="Rules" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="reports"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" label="Reports" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Settings" focused={focused} />,
+        }}
+      />
+    </Tabs>
+  );
+}
