@@ -47,6 +47,29 @@ export default function ChildHomeScreen() {
 
   useEffect(() => { load(); }, [selectedChildId]);
 
+  // Polling loop for sync
+  useEffect(() => {
+    if (!selectedChildId) return;
+    
+    // Initial sync
+    import('@/services/usageService').then(({ syncInstalledApps, syncUsageStats }) => {
+      syncInstalledApps(selectedChildId).then(() => {
+        syncUsageStats(selectedChildId);
+        load();
+      });
+    });
+
+    const interval = setInterval(() => {
+      import('@/services/usageService').then(({ syncUsageStats }) => {
+        syncUsageStats(selectedChildId).then(() => {
+          load(); // reload UI
+        });
+      });
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedChildId]);
+
   const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleSendRequest = async () => {

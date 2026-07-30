@@ -1,5 +1,4 @@
-// Android UsageStatsManager bridge (Phase 1 Stub)
-// In Phase 2, this will bridge to a Kotlin Native Module.
+import { NativeModules, Platform } from 'react-native';
 
 export interface UsageStat {
   packageName: string;
@@ -7,15 +6,27 @@ export interface UsageStat {
   lastTimeUsed: number; // timestamp
 }
 
-export interface UsageStatsModule {
+export interface InstalledApp {
+  packageName: string;
+  appName: string;
+}
+
+export interface UsageStatsModuleType {
   getUsageStats(startTime: number, endTime: number): Promise<UsageStat[]>;
+  getInstalledApps(): Promise<InstalledApp[]>;
   isPermissionGranted(): Promise<boolean>;
   openUsageAccessSettings(): void;
 }
 
-const UsageStatsModuleStub: UsageStatsModule = {
+const { UsageStatsModule } = NativeModules;
+
+const UsageStatsModuleStub: UsageStatsModuleType = {
   getUsageStats: async (startTime, endTime) => {
     console.warn('[UsageStatsModule] getUsageStats called (STUB)');
+    return [];
+  },
+  getInstalledApps: async () => {
+    console.warn('[UsageStatsModule] getInstalledApps called (STUB)');
     return [];
   },
   isPermissionGranted: async () => {
@@ -27,4 +38,6 @@ const UsageStatsModuleStub: UsageStatsModule = {
   }
 };
 
-export default UsageStatsModuleStub;
+export default (Platform.OS === 'android' && UsageStatsModule 
+  ? UsageStatsModule as UsageStatsModuleType 
+  : UsageStatsModuleStub);
