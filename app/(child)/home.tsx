@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StatusBar, RefreshControl, Modal, TextInput,
@@ -9,17 +9,20 @@ import { useAgentStore } from '@/store/agentStore';
 import { useFamilyStore } from '@/store/familyStore';
 import { getRules } from '@/services/ruleService';
 import { getSchedules } from '@/services/scheduleService';
-import { getDailyUsage } from '@/services/usageService';
+import { getDailyUsage, getInstalledApps } from '@/services/usageService';
 import { supabase } from '@/services/supabase';
 import { TimeRing } from '@/components/ui/TimeRing';
 import { formatMinutes } from '@/utils/formatTime';
-import { isScheduleActive } from '@/utils/scheduleEvaluator';
+import { isScheduleActive, isAppBlockedBySchedule } from '@/utils/scheduleEvaluator';
+import AppBlockerModule from '@/modules/android/AppBlockerModule';
 
 export default function ChildHomeScreen() {
   const { setActiveRules, setActiveSchedules, activeRules, activeSchedules } = useAgentStore();
   const { selectedChildId, children } = useFamilyStore();
 
   const [usageData, setUsageData]   = useState<any[]>([]);
+  const [installedApps, setInstalledApps] = useState<any[]>([]);
+  const previouslyBlockedPackages = useRef<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const [requestMsg, setRequestMsg] = useState('');
@@ -32,14 +35,16 @@ export default function ChildHomeScreen() {
   const load = async () => {
     if (!selectedChildId) return;
     try {
-      const [rules, schedules, usage] = await Promise.all([
+      const [rules, schedules, usage, apps] = await Promise.all([
         getRules(selectedChildId),
         getSchedules(selectedChildId),
         getDailyUsage(selectedChildId, today),
+        getInstalledApps(selectedChildId),
       ]);
       setActiveRules(rules ?? []);
       setActiveSchedules(schedules ?? []);
       setUsageData(usage ?? []);
+      setInstalledApps(apps ?? []);
     } finally {
       setRefreshing(false);
     }
@@ -69,6 +74,67 @@ export default function ChildHomeScreen() {
 
     return () => clearInterval(interval);
   }, [selectedChildId]);
+
+  const enforceBlocks = () => {
+    if (!installedApps.length || !selectedChildId) return;
+
+    const currentlyBlockedPackages = new Set<string>();
+
+    installedApps.forEach((app) => {
+      const { id: appId, package_name: packageName, category } = app;
+      let isBlocked = false;
+
+      // 1. Evaluate Manual Blocks
+      const blockRule = activeRules.find((r) => r.app_id === appId && r.rule_type === 'BLOCK');
+      if (blockRule) isBlocked = true;
+
+      // 2. Evaluate Time Limits
+      if (!isBlocked) {
+        const timeRule = activeRules.find((r) => r.app_id === appId && r.rule_type === 'TIME_LIMIT');
+        if (timeRule) {
+          const usage = usageData.find((u) => u.app_id === appId);
+          const usedMinutes = usage?.usage_minutes ?? 0;
+          if (timeRule.daily_limit_minutes != null && usedMinutes >= timeRule.daily_limit_minutes) {
+            isBlocked = true;
+          }
+        }
+      }
+
+      // 3. Evaluate Schedules
+      if (!isBlocked) {
+        if (isAppBlockedBySchedule(activeSchedules, packageName, category, appId)) {
+          isBlocked = true;
+        }
+      }
+
+      if (isBlocked) {
+        currentlyBlockedPackages.add(packageName);
+      }
+    });
+
+    // Native Sync
+    const prevBlocked = previouslyBlockedPackages.current;
+    
+    // Find newly blocked apps
+    for (const pkg of currentlyBlockedPackages) {
+      if (!prevBlocked.has(pkg)) {
+        AppBlockerModule.blockApp(pkg);
+      }
+    }
+
+    // Find newly unblocked apps
+    for (const pkg of prevBlocked) {
+      if (!currentlyBlockedPackages.has(pkg)) {
+        AppBlockerModule.unblockApp(pkg);
+      }
+    }
+
+    previouslyBlockedPackages.current = currentlyBlockedPackages;
+  };
+
+  useEffect(() => {
+    enforceBlocks();
+  }, [activeRules, activeSchedules, usageData, installedApps]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 

@@ -1,5 +1,4 @@
-// Android Accessibility Service bridge for app blocking (Phase 1 Stub)
-// In Phase 2, this will bridge to a Kotlin Native Module.
+import { NativeModules, Platform } from 'react-native';
 
 export interface AppBlockerModule {
   blockApp(packageName: string): Promise<void>;
@@ -8,20 +7,24 @@ export interface AppBlockerModule {
   openAccessibilitySettings(): void;
 }
 
-const AppBlockerModuleStub: AppBlockerModule = {
-  blockApp: async (packageName) => {
-    console.warn(`[AppBlockerModule] blockApp(${packageName}) called (STUB)`);
-  },
-  unblockApp: async (packageName) => {
-    console.warn(`[AppBlockerModule] unblockApp(${packageName}) called (STUB)`);
-  },
-  isAccessibilityEnabled: async () => {
-    console.warn('[AppBlockerModule] isAccessibilityEnabled called (STUB)');
-    return false;
-  },
-  openAccessibilitySettings: () => {
-    console.warn('[AppBlockerModule] openAccessibilitySettings called (STUB)');
-  }
-};
+const { AppBlockerModule } = NativeModules;
 
-export default AppBlockerModuleStub;
+const AppBlockerModuleWrapper: AppBlockerModule = Platform.OS === 'android' && AppBlockerModule
+  ? AppBlockerModule
+  : {
+      blockApp: async (packageName: string) => {
+        console.warn(`[AppBlockerModule] blockApp(${packageName}) called (STUB/UNSUPPORTED)`);
+      },
+      unblockApp: async (packageName: string) => {
+        console.warn(`[AppBlockerModule] unblockApp(${packageName}) called (STUB/UNSUPPORTED)`);
+      },
+      isAccessibilityEnabled: async () => {
+        console.warn('[AppBlockerModule] isAccessibilityEnabled called (STUB/UNSUPPORTED)');
+        return false;
+      },
+      openAccessibilitySettings: () => {
+        console.warn('[AppBlockerModule] openAccessibilitySettings called (STUB/UNSUPPORTED)');
+      }
+    };
+
+export default AppBlockerModuleWrapper;
