@@ -5,6 +5,7 @@ export interface Family {
   parent_id: string;
   name: string;
   timezone: string;
+  has_completed_onboarding: boolean;
 }
 
 export interface Child {

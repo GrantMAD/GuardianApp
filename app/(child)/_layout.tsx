@@ -7,6 +7,7 @@ export default function ChildLayout() {
       <Stack.Screen name="home" />
       <Stack.Screen name="app-blocked" />
       <Stack.Screen name="request-sent" />
+      <Stack.Screen name="setup" />
     </Stack>
   );
 }

@@ -18,6 +18,8 @@ import AppBlockerModule from '@/modules/android/AppBlockerModule';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { getTodayApprovedExtraMinutes } from '@/services/permissionRequestService';
+import { isSetupComplete } from '@/app/(child)/setup';
+import { useRouter } from 'expo-router';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -55,8 +57,18 @@ async function registerForPushNotificationsAsync(childId: string) {
 }
 
 export default function ChildHomeScreen() {
+  const router = useRouter();
   const { setActiveRules, setActiveSchedules, activeRules, activeSchedules } = useAgentStore();
   const { selectedChildId, children } = useFamilyStore();
+
+  // Setup guard — redirect to wizard if permissions not yet configured
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      isSetupComplete().then((done) => {
+        if (!done) router.replace('/(child)/setup');
+      });
+    }
+  }, []);
 
   const [usageData, setUsageData]   = useState<any[]>([]);
   const [installedApps, setInstalledApps] = useState<any[]>([]);

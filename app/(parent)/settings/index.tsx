@@ -93,12 +93,14 @@ export default function SettingsScreen() {
         <View className="bg-bg-card rounded-2xl border border-border mb-5 overflow-hidden">
           {[
             { label: '🔔 Notification Settings', route: '/(parent)/settings/notifications' as const },
-          ].map((item, i) => (
+            { label: '🔒 Privacy Policy', route: '/(parent)/settings/privacy' as const },
+            { label: '📄 Terms of Service', route: '/(parent)/settings/terms' as const },
+          ].map((item, i, arr) => (
             <TouchableOpacity
               key={item.label}
               id={`settings-${i}`}
               onPress={() => router.push(item.route)}
-              className="flex-row items-center justify-between p-4"
+              className={`flex-row items-center justify-between p-4 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}
             >
               <Text className="text-text-primary">{item.label}</Text>
               <Text className="text-text-muted">›</Text>

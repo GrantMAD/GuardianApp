@@ -65,6 +65,9 @@ export default function ParentLayout() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Settings" focused={focused} />,
         }}
       />
+      {/* Hidden screens — no tab bar entry */}
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="onboarding" options={{ href: null }} />
     </Tabs>
   );
 }

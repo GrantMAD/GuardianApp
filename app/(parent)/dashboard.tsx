@@ -64,13 +64,20 @@ export default function DashboardScreen() {
       let fam = family;
       if (!fam) {
         fam = await getFamily();
-        if (fam) setFamily(fam);
+        if (fam) {
+          setFamily(fam);
+          // First-time user: redirect to onboarding
+          if (!fam.has_completed_onboarding) {
+            router.replace('/(parent)/onboarding');
+            return;
+          }
+        }
       }
       if (fam) {
         const kids = await getChildren(fam.id);
         setChildren(kids);
         if (!selectedChildId && kids.length > 0) setSelectedChildId(kids[0].id);
-        
+
         // Push notifications & requests
         registerForPushNotificationsAsync(fam.id);
         const reqs = await getPendingRequests(fam.id);
@@ -89,6 +96,7 @@ export default function DashboardScreen() {
       setRefreshing(false);
     }
   };
+
 
   useEffect(() => { load(); }, [selectedChildId]);
 
