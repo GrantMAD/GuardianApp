@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StatusBar, ActivityIndicator, RefreshControl,
+  StatusBar, ActivityIndicator, RefreshControl, Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,34 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { formatMinutes } from '@/utils/formatTime';
 import { signOut } from '@/services/authService';
 import { CATEGORY_COLORS } from '@/constants/categories';
+import { supabase } from '@/services/supabase';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { getPendingRequests, updateRequestStatus, PermissionRequest } from '@/services/permissionRequestService';
+import { PermissionRequestCard } from '@/components/ui/PermissionRequestCard';
+
+async function registerForPushNotificationsAsync(familyId: string) {
+  if (!Device.isDevice) return;
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== 'granted') return;
+  const token = (await Notifications.getExpoPushTokenAsync()).data;
+
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  await supabase.from('families').update({ push_token: token }).eq('id', familyId);
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -26,6 +54,7 @@ export default function DashboardScreen() {
   const [usageData, setUsageData]     = useState<any[]>([]);
   const [totalMins, setTotalMins]     = useState<number | null>(null);
   const [loading, setLoading]         = useState(true);
+  const [pendingRequests, setPendingRequests] = useState<PermissionRequest[]>([]);
 
   const today = new Date().toISOString().slice(0, 10);
   const selectedChild = children.find((c) => c.id === selectedChildId);
@@ -41,6 +70,11 @@ export default function DashboardScreen() {
         const kids = await getChildren(fam.id);
         setChildren(kids);
         if (!selectedChildId && kids.length > 0) setSelectedChildId(kids[0].id);
+        
+        // Push notifications & requests
+        registerForPushNotificationsAsync(fam.id);
+        const reqs = await getPendingRequests(fam.id);
+        setPendingRequests(reqs);
       }
       if (selectedChildId) {
         const [usage, summary] = await Promise.all([
@@ -59,6 +93,20 @@ export default function DashboardScreen() {
   useEffect(() => { load(); }, [selectedChildId]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
+
+  const handleApproveRequest = async (requestId: string, extraMinutes: number) => {
+    const success = await updateRequestStatus(requestId, 'approved', extraMinutes);
+    if (success) {
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+    }
+  };
+
+  const handleDenyRequest = async (requestId: string) => {
+    const success = await updateRequestStatus(requestId, 'denied');
+    if (success) {
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+    }
+  };
 
   const chartData = usageData.slice(0, 5).map((u: any) => ({
     label: u.installed_apps?.app_name ?? 'Unknown',
@@ -79,13 +127,22 @@ export default function DashboardScreen() {
             <Text className="text-text-muted text-sm">Good{getGreeting()},</Text>
             <Text className="text-text-primary text-2xl font-bold">{family?.name ?? 'Your Family'}</Text>
           </View>
-          <TouchableOpacity
-            id="btn-settings"
-            onPress={() => router.push('/(parent)/settings')}
-            className="w-10 h-10 bg-bg-elevated rounded-full items-center justify-center border border-border"
-          >
-            <Text>⚙️</Text>
-          </TouchableOpacity>
+          <View className="flex-row gap-x-2">
+            <TouchableOpacity
+              id="btn-notifications"
+              onPress={() => router.push('/(parent)/notifications')}
+              className="w-10 h-10 bg-bg-elevated rounded-full items-center justify-center border border-border"
+            >
+              <Text>🔔</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              id="btn-settings"
+              onPress={() => router.push('/(parent)/settings')}
+              className="w-10 h-10 bg-bg-elevated rounded-full items-center justify-center border border-border"
+            >
+              <Text>⚙️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Child Selector */}
@@ -126,8 +183,22 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {pendingRequests.length > 0 && (
+          <View className="px-5 mt-4">
+            <SectionHeader title="Pending Requests" />
+            {pendingRequests.map(req => (
+              <PermissionRequestCard
+                key={req.id}
+                request={req}
+                onApprove={(mins) => handleApproveRequest(req.id, mins)}
+                onDeny={() => handleDenyRequest(req.id)}
+              />
+            ))}
+          </View>
+        )}
+
         {selectedChild && (
-          <View className="px-5">
+          <View className="px-5 mt-2">
             {/* Stats row */}
             <View className="flex-row gap-x-3 mb-1">
               <StatCard

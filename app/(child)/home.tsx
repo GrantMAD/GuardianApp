@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StatusBar, RefreshControl, Modal, TextInput,
-  ActivityIndicator,
+  ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAgentStore } from '@/store/agentStore';
@@ -15,6 +15,44 @@ import { TimeRing } from '@/components/ui/TimeRing';
 import { formatMinutes } from '@/utils/formatTime';
 import { isScheduleActive, isAppBlockedBySchedule } from '@/utils/scheduleEvaluator';
 import AppBlockerModule from '@/modules/android/AppBlockerModule';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { getTodayApprovedExtraMinutes } from '@/services/permissionRequestService';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+async function registerForPushNotificationsAsync(childId: string) {
+  if (!Device.isDevice) return;
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== 'granted') return;
+  
+  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  // Update supabase
+  await supabase.from('children').update({ push_token: token }).eq('id', childId);
+}
 
 export default function ChildHomeScreen() {
   const { setActiveRules, setActiveSchedules, activeRules, activeSchedules } = useAgentStore();
@@ -23,11 +61,14 @@ export default function ChildHomeScreen() {
   const [usageData, setUsageData]   = useState<any[]>([]);
   const [installedApps, setInstalledApps] = useState<any[]>([]);
   const previouslyBlockedPackages = useRef<Set<string>>(new Set());
+  const warnedApps = useRef<Set<string>>(new Set());
+  
   const [refreshing, setRefreshing] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const [requestMsg, setRequestMsg] = useState('');
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [extraMinutes, setExtraMinutes] = useState(0);
 
   const child = children.find((c) => c.id === selectedChildId);
   const today = new Date().toISOString().slice(0, 10);
@@ -35,16 +76,18 @@ export default function ChildHomeScreen() {
   const load = async () => {
     if (!selectedChildId) return;
     try {
-      const [rules, schedules, usage, apps] = await Promise.all([
+      const [rules, schedules, usage, apps, approvedMins] = await Promise.all([
         getRules(selectedChildId),
         getSchedules(selectedChildId),
         getDailyUsage(selectedChildId, today),
         getInstalledApps(selectedChildId),
+        getTodayApprovedExtraMinutes(selectedChildId),
       ]);
       setActiveRules(rules ?? []);
       setActiveSchedules(schedules ?? []);
       setUsageData(usage ?? []);
       setInstalledApps(apps ?? []);
+      setExtraMinutes(approvedMins);
     } finally {
       setRefreshing(false);
     }
@@ -52,7 +95,14 @@ export default function ChildHomeScreen() {
 
   useEffect(() => { load(); }, [selectedChildId]);
 
-  // Polling loop for sync
+  // Register push notifications
+  useEffect(() => {
+    if (selectedChildId) {
+      registerForPushNotificationsAsync(selectedChildId);
+    }
+  }, [selectedChildId]);
+
+  // Polling loop for sync & Realtime listener
   useEffect(() => {
     if (!selectedChildId) return;
     
@@ -72,7 +122,28 @@ export default function ChildHomeScreen() {
       });
     }, 60000); // 60 seconds
 
-    return () => clearInterval(interval);
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'permission_requests',
+          filter: `child_id=eq.${selectedChildId}`,
+        },
+        (payload) => {
+          if (payload.new.status === 'approved') {
+            load(); // Reload rules and extra minutes
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, [selectedChildId]);
 
   const enforceBlocks = () => {
@@ -94,8 +165,21 @@ export default function ChildHomeScreen() {
         if (timeRule) {
           const usage = usageData.find((u) => u.app_id === appId);
           const usedMinutes = usage?.usage_minutes ?? 0;
-          if (timeRule.daily_limit_minutes != null && usedMinutes >= timeRule.daily_limit_minutes) {
+          const limit = (timeRule.daily_limit_minutes ?? 0) + extraMinutes;
+          
+          if (limit > 0 && usedMinutes >= limit) {
             isBlocked = true;
+          } else if (limit > 0 && (limit - usedMinutes) === 10) {
+            if (!warnedApps.current.has(appId)) {
+               Notifications.scheduleNotificationAsync({
+                 content: {
+                   title: "Time Limit Warning",
+                   body: `You have 10 minutes left on ${app.app_name}`,
+                 },
+                 trigger: null,
+               });
+               warnedApps.current.add(appId);
+            }
           }
         }
       }
@@ -134,7 +218,7 @@ export default function ChildHomeScreen() {
 
   useEffect(() => {
     enforceBlocks();
-  }, [activeRules, activeSchedules, usageData, installedApps]);
+  }, [activeRules, activeSchedules, usageData, installedApps, extraMinutes]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -216,7 +300,7 @@ export default function ChildHomeScreen() {
                   <View key={u.app_id} className="w-24 items-center">
                     <TimeRing
                       usedMinutes={u.usage_minutes ?? 0}
-                      limitMinutes={rule?.daily_limit_minutes ?? 60}
+                      limitMinutes={(rule?.daily_limit_minutes ?? 60) + extraMinutes}
                       size={88}
                       label={u.installed_apps?.app_name ?? 'App'}
                     />
