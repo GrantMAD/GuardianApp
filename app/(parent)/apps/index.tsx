@@ -75,33 +75,37 @@ export default function AppListScreen() {
           onChangeText={setSearch}
           placeholder="Search apps…"
           placeholderTextColor="#9090A8"
-          className="bg-bg-card border border-border rounded-2xl px-4 py-3 text-text-primary text-base mb-3"
+          className="bg-bg-card border border-border rounded-2xl px-4 py-3 text-text-primary text-base"
         />
       </View>
 
       {/* Category chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-5 mb-2">
-        <TouchableOpacity
-          onPress={() => setCategory('all')}
-          className={`px-4 py-2 rounded-full mr-2 border ${category === 'all' ? 'bg-accent/20 border-accent' : 'bg-bg-elevated border-border'}`}
-        >
-          <Text className={`text-sm font-medium ${category === 'all' ? 'text-accent-light' : 'text-text-primary'}`}>All</Text>
-        </TouchableOpacity>
-        {APP_CATEGORIES.map((c) => (
-          <CategoryChip
-            key={c.value}
-            category={c.value}
-            isSelected={category === c.value}
-            onPress={() => setCategory(category === c.value ? 'all' : c.value)}
-          />
-        ))}
+      <View className="h-10 mb-2">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-grow-0">
+        <View className="flex-row items-center px-5">
+          <TouchableOpacity
+            onPress={() => setCategory('all')}
+            className={`px-4 py-2 rounded-full mr-2 border ${category === 'all' ? 'bg-accent/20 border-accent' : 'bg-bg-elevated border-border'}`}
+          >
+            <Text className={`text-sm font-medium ${category === 'all' ? 'text-accent-light' : 'text-text-primary'}`}>All</Text>
+          </TouchableOpacity>
+          {APP_CATEGORIES.map((c) => (
+            <CategoryChip
+              key={c.value}
+              category={c.value}
+              isSelected={category === c.value}
+              onPress={() => setCategory(category === c.value ? 'all' : c.value)}
+            />
+          ))}
+        </View>
       </ScrollView>
+      </View>
 
       {/* List */}
       {loading ? (
         <ActivityIndicator color="#7C6AF5" className="mt-8" />
       ) : (
-        <ScrollView className="flex-1 px-5 pt-2">
+        <ScrollView className="flex-1 px-5 pt-1">
           {filtered.length === 0 ? (
             <View className="items-center py-12">
               <Text className="text-text-muted text-sm">
