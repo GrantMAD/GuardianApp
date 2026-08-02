@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
+import { TopNavbar } from '@/components/ui/TopNavbar';
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
@@ -24,7 +25,8 @@ export default function ParentLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        header: () => <TopNavbar />,
         tabBarStyle: {
           backgroundColor: '#1A1A24',
           borderTopColor: '#2A2A3E',
@@ -61,9 +63,7 @@ export default function ParentLayout() {
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Settings" focused={focused} />,
-        }}
+        options={{ href: null }}
       />
       {/* Hidden screens — no tab bar entry */}
       <Tabs.Screen name="notifications" options={{ href: null }} />

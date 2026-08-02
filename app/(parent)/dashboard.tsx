@@ -129,28 +129,10 @@ export default function DashboardScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#7C6AF5" />}
       >
-        {/* Header */}
-        <View className="flex-row items-center justify-between px-5 pt-4 pb-2">
-          <View>
-            <Text className="text-text-muted text-sm">Good{getGreeting()},</Text>
-            <Text className="text-text-primary text-2xl font-bold">{family?.name ?? 'Your Family'}</Text>
-          </View>
-          <View className="flex-row gap-x-2">
-            <TouchableOpacity
-              id="btn-notifications"
-              onPress={() => router.push('/(parent)/notifications')}
-              className="w-10 h-10 bg-bg-elevated rounded-full items-center justify-center border border-border"
-            >
-              <Text>🔔</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              id="btn-settings"
-              onPress={() => router.push('/(parent)/settings')}
-              className="w-10 h-10 bg-bg-elevated rounded-full items-center justify-center border border-border"
-            >
-              <Text>⚙️</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Greeting Area */}
+        <View className="px-5 pt-4 pb-2">
+          <Text className="text-text-muted text-sm">Good{getGreeting()},</Text>
+          <Text className="text-text-primary text-2xl font-bold">{family?.name ?? 'Your Family'}</Text>
         </View>
 
         {/* Child Selector */}
