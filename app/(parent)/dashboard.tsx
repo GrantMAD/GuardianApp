@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { useAuthStore } from '@/store/authStore';
-import { getFamily, getChildren } from '@/services/childService';
+import { getFamily, getChildren, createFamily } from '@/services/childService';
 import { getDailyUsage, getDailyScreenTimeSummary } from '@/services/usageService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { StatCard } from '@/components/ui/StatCard';
@@ -64,6 +64,14 @@ export default function DashboardScreen() {
       let fam = family;
       if (!fam) {
         fam = await getFamily();
+        if (!fam) {
+          // Fallback: If family is missing (e.g., due to email confirmation bypassing it), create a default one
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          const defaultName = currentUser?.user_metadata?.family_name || 'My Family';
+          console.log(`No family found for this user, auto-creating family: ${defaultName}`);
+          fam = await createFamily(defaultName);
+        }
+        
         if (fam) {
           setFamily(fam);
           // First-time user: redirect to onboarding

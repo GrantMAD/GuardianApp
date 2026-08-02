@@ -29,7 +29,7 @@ export default function SignUpScreen() {
     setLoading(true);
     setError('');
     try {
-      const data = await signUp(email, password);
+      const data = await signUp(email, password, familyName);
       if (data.session) {
         setSession(data.session);
         setUser(data.user);
