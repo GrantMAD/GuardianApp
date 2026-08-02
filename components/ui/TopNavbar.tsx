@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { signOut } from '@/services/authService';
 
 const { width } = Dimensions.get('window');
-const SIDEBAR_WIDTH = width * 0.75;
+const SIDEBAR_WIDTH = Platform.OS === 'web' ? 280 : Math.min(width * 0.75, 320);
 
 export function TopNavbar() {
   const router = useRouter();

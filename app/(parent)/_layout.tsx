@@ -34,6 +34,11 @@ export default function ParentLayout() {
           height: 64,
           paddingBottom: 8,
         },
+        tabBarItemStyle: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
         tabBarShowLabel: false,
       }}
     >
@@ -68,6 +73,20 @@ export default function ParentLayout() {
       {/* Hidden screens — no tab bar entry */}
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="onboarding" options={{ href: null }} />
+
+      {/* Hide all sub-routes from tab bar */}
+      <Tabs.Screen name="settings/add-child" options={{ href: null }} />
+      <Tabs.Screen name="settings/notifications" options={{ href: null }} />
+      <Tabs.Screen name="settings/privacy" options={{ href: null }} />
+      <Tabs.Screen name="settings/terms" options={{ href: null }} />
+      <Tabs.Screen name="settings/child/[childId]" options={{ href: null }} />
+
+      <Tabs.Screen name="rules/create-block" options={{ href: null }} />
+      <Tabs.Screen name="rules/create-limit" options={{ href: null }} />
+      <Tabs.Screen name="rules/schedules" options={{ href: null }} />
+      <Tabs.Screen name="rules/schedules/create" options={{ href: null }} />
+
+      <Tabs.Screen name="apps/[appId]" options={{ href: null }} />
     </Tabs>
   );
 }
