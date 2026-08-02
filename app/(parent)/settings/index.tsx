@@ -5,15 +5,18 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
+import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAuthStore } from '@/store/authStore';
 import { signOut } from '@/services/authService';
+import { updateFamilyTheme } from '@/services/childService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export default function SettingsScreen() {
   const router  = useRouter();
+  const { colors, isDark } = useAppTheme();
   const { user, signOut: clearAuth } = useAuthStore();
-  const { family, children, clearFamily } = useFamilyStore();
+  const { family, children, theme, setTheme, clearFamily } = useFamilyStore();
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -31,9 +34,23 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleToggleTheme = async () => {
+    if (!family) return;
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    // Optimistic UI update
+    setTheme(newTheme);
+    try {
+      await updateFamilyTheme(family.id, newTheme);
+    } catch (err) {
+      console.error('Failed to update theme', err);
+      // Revert on fail
+      setTheme(theme);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-bg-primary">
-      <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
       <ScrollView className="flex-1 px-5">
         <Text className="text-text-primary text-2xl font-bold pt-4 mb-5">Settings</Text>
 
@@ -91,6 +108,15 @@ export default function SettingsScreen() {
         {/* General settings */}
         <SectionHeader title="General" />
         <View className="bg-bg-card rounded-2xl border border-border mb-5 overflow-hidden">
+          <TouchableOpacity
+            id="settings-theme"
+            onPress={handleToggleTheme}
+            className="flex-row items-center justify-between p-4 border-b border-border"
+          >
+            <Text className="text-text-primary">🎨 Theme Mode</Text>
+            <Text className="text-text-muted capitalize">{theme} ›</Text>
+          </TouchableOpacity>
+
           {[
             { label: '🔔 Notification Settings', route: '/(parent)/settings/notifications' as const },
             { label: '🔒 Privacy Policy', route: '/(parent)/settings/privacy' as const },

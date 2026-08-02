@@ -8,11 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
 
-// NativeWind v4 class-based dark mode: add 'dark' to <html> on web.
-// This matches darkMode: 'class' in tailwind.config.js.
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  document.documentElement.classList.add('dark');
-}
+// Theme is applied dynamically in AuthGuard using familyStore
 
 const queryClient = new QueryClient();
 
@@ -20,6 +16,17 @@ function AuthGuard() {
   const router = useRouter();
   const segments = useSegments();
   const { session, role, setSession, setUser } = useAuthStore();
+  const { theme } = require('@/store/familyStore').useFamilyStore();
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [theme]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

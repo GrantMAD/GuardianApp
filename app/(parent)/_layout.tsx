@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
 import { TopNavbar } from '@/components/ui/TopNavbar';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
@@ -22,14 +23,16 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
 }
 
 export default function ParentLayout() {
+  const { colors } = useAppTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
         header: () => <TopNavbar />,
         tabBarStyle: {
-          backgroundColor: '#1A1A24',
-          borderTopColor: '#2A2A3E',
+          backgroundColor: colors.bgCard,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 64,
           paddingBottom: 8,

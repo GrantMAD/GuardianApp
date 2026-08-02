@@ -9,18 +9,20 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "bg-primary":   "#0F0F14",
-        "bg-card":      "#1A1A24",
-        "bg-elevated":  "#22223A",
+        // These resolve from CSS variables — updated at runtime by toggling .dark on <html>
+        "bg-primary":   "var(--color-bg-primary)",
+        "bg-card":      "var(--color-bg-card)",
+        "bg-elevated":  "var(--color-bg-elevated)",
+        "text-primary": "var(--color-text-primary)",
+        "text-muted":   "var(--color-text-muted)",
+        "border":       "var(--color-border)",
+        // Accent & semantic colors are identical in both themes
         "accent":       "#7C6AF5",
         "accent-light": "#9B8FF7",
         "accent-teal":  "#4ECDC4",
         "success":      "#22C55E",
         "warning":      "#F59E0B",
         "danger":       "#EF4444",
-        "text-primary": "#F1F1F5",
-        "text-muted":   "#9090A8",
-        "border":       "#2A2A3E",
       },
       fontFamily: {
         sans:     ["Inter_400Regular"],

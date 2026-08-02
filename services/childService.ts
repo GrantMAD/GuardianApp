@@ -6,6 +6,7 @@ export interface Family {
   name: string;
   timezone: string;
   has_completed_onboarding: boolean;
+  theme: 'light' | 'dark';
 }
 
 export interface Child {
@@ -31,6 +32,18 @@ export async function createFamily(name: string, timezone: string = 'UTC') {
   const { data, error } = await supabase
     .from('families')
     .insert({ parent_id: user.user.id, name, timezone })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Family;
+}
+
+export async function updateFamilyTheme(familyId: string, theme: 'light' | 'dark') {
+  const { data, error } = await supabase
+    .from('families')
+    .update({ theme })
+    .eq('id', familyId)
     .select()
     .single();
 

@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme colour tokens ─────────────────────────────────────── */
+/* Light mode (default — no .dark class)                         */
+:root {
+  --color-bg-primary:   #F4F6FB;
+  --color-bg-card:      #FFFFFF;
+  --color-bg-elevated:  #E9EDF6;
+  --color-text-primary: #0F0F1A;
+  --color-text-muted:   #64748B;
+  --color-border:       #D4D8E8;
+}
+
+/* Dark mode (.dark class on <html>)                             */
+.dark {
+  --color-bg-primary:   #0F0F14;
+  --color-bg-card:      #1A1A24;
+  --color-bg-elevated:  #22223A;
+  --color-text-primary: #F1F1F5;
+  --color-text-muted:   #9090A8;
+  --color-border:       #2A2A3E;
+}
+
 /* ── Web root fullscreen fix ─────────────────────────────── */
 html,
 body {
@@ -9,7 +30,7 @@ body {
   width: 100%;
   margin: 0;
   padding: 0;
-  background-color: #0F0F14;
+  background-color: var(--color-bg-primary);
   overflow: hidden;
 }
 
@@ -18,5 +39,5 @@ body {
   flex: 1;
   height: 100%;
   width: 100%;
-  background-color: #0F0F14;
+  background-color: var(--color-bg-primary);
 }
