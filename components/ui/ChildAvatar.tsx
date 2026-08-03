@@ -10,9 +10,10 @@ interface ChildAvatarProps {
   isSelected?: boolean;
   onPress?: () => void;
   size?: 'sm' | 'md' | 'lg';
+  hideName?: boolean;
 }
 
-export function ChildAvatar({ name, avatarUrl, isActive, isSelected, onPress, size = 'md' }: ChildAvatarProps) {
+export function ChildAvatar({ name, avatarUrl, isActive, isSelected, onPress, size = 'md', hideName = false }: ChildAvatarProps) {
   const { isDark } = useAppTheme();
   
   const sizeMap = {
@@ -32,7 +33,7 @@ export function ChildAvatar({ name, avatarUrl, isActive, isSelected, onPress, si
   const textStyle = { color: `hsl(${hue}, 80%, ${lightnessText})` };
 
   return (
-    <Container onPress={onPress} className="items-center mr-4">
+    <Container onPress={onPress} className="items-center">
       <View 
         className={`rounded-full ${sizeMap[size]} ${isSelected ? 'border-[3px] border-accent' : 'border-[3px] border-transparent'} items-center justify-center relative`}
         style={!avatarUrl ? bgStyle : undefined}
@@ -46,9 +47,11 @@ export function ChildAvatar({ name, avatarUrl, isActive, isSelected, onPress, si
           <View className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-bg-primary ${isActive ? 'bg-success' : 'bg-text-muted'}`} />
         )}
       </View>
-      <Text className={`mt-1 text-xs font-medium ${isSelected ? 'text-accent' : 'text-text-muted'}`}>
-        {name}
-      </Text>
+      {!hideName && (
+        <Text className={`mt-1 text-xs font-medium ${isSelected ? 'text-accent' : 'text-text-muted'}`}>
+          {name}
+        </Text>
+      )}
     </Container>
   );
 }

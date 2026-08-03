@@ -86,3 +86,39 @@ export async function addChild(familyId: string, name: string) {
   if (error) throw error;
   return data as Child;
 }
+
+export async function uploadChildAvatar(childId: string, imageUri: string) {
+  // Convert local URI to Blob
+  const response = await fetch(imageUri);
+  const blob = await response.blob();
+
+  // Create unique filename
+  const ext = imageUri.split('.').pop() || 'jpg';
+  const fileName = `${childId}-${Date.now()}.${ext}`;
+
+  // Upload to Supabase Storage
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, blob, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(fileName);
+
+  // Update child record
+  const { data, error: updateError } = await supabase
+    .from('children')
+    .update({ avatar_url: publicUrl })
+    .eq('id', childId)
+    .select()
+    .single();
+
+  if (updateError) throw updateError;
+  return data as Child;
+}

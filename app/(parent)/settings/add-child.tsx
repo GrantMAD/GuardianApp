@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StatusBar, ActivityIndicator, ScrollView,
+  StatusBar, ActivityIndicator, ScrollView, Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
-import { addChild, getChildren } from '@/services/childService';
+import { addChild, getChildren, uploadChildAvatar } from '@/services/childService';
 
 export default function AddChildScreen() {
   const router = useRouter();
@@ -15,6 +16,24 @@ export default function AddChildScreen() {
   const [name, setName]     = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAvatarUri(result.assets[0].uri);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to pick image.');
+    }
+  };
 
   const handleAdd = async () => {
     if (!name.trim()) { setError('Please enter a name.'); return; }
@@ -23,6 +42,9 @@ export default function AddChildScreen() {
     setError('');
     try {
       const child = await addChild(family.id, name.trim());
+      if (avatarUri) {
+        await uploadChildAvatar(child.id, avatarUri);
+      }
       // Refresh children list
       const updated = await getChildren(family.id);
       setChildren(updated);
@@ -45,9 +67,19 @@ export default function AddChildScreen() {
 
         {/* Header */}
         <View className="items-center mb-8">
-          <View className="w-20 h-20 rounded-full bg-accent/20 border border-accent/40 items-center justify-center mb-4">
-            <Text style={{ fontSize: 36 }}>👦</Text>
-          </View>
+          <TouchableOpacity onPress={handlePickImage} className="items-center mb-4">
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} className="w-24 h-24 rounded-full border-2 border-accent" />
+            ) : (
+              <View className="w-24 h-24 rounded-full bg-accent/20 border border-accent/40 items-center justify-center relative">
+                <Text style={{ fontSize: 36 }}>👦</Text>
+                <View className="absolute bottom-0 right-0 bg-bg-card rounded-full p-1.5 border-2 border-border">
+                  <Text style={{ fontSize: 12 }}>📷</Text>
+                </View>
+              </View>
+            )}
+            <Text className="text-accent text-sm font-semibold mt-2">Choose Photo</Text>
+          </TouchableOpacity>
           <Text className="text-text-primary text-2xl font-bold">Add a Child</Text>
           <Text className="text-text-muted text-sm text-center mt-1">
             Create a profile to monitor this child's device.

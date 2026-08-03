@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity,
-  StatusBar, ActivityIndicator, Alert,
+  StatusBar, ActivityIndicator, Alert, Image
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { supabase } from '@/services/supabase';
-import { getChildren } from '@/services/childService';
+import { getChildren, uploadChildAvatar } from '@/services/childService';
 import { generatePairingCode } from '@/services/pairingService';
+import { ChildAvatar } from '@/components/ui/ChildAvatar';
 
 export default function ChildProfileScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
@@ -21,7 +23,32 @@ export default function ChildProfileScreen() {
   const [saving, setSaving]     = useState(false);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading]   = useState(false);
   const [error, setError]       = useState('');
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAvatarLoading(true);
+        const updatedChild = await uploadChildAvatar(child!.id, result.assets[0].uri);
+        if (family) {
+          const updated = await getChildren(family.id);
+          setChildren(updated);
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to upload image.');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Name cannot be empty.'); return; }
@@ -94,12 +121,22 @@ export default function ChildProfileScreen() {
 
         {/* Avatar */}
         <View className="items-center mb-6">
-          <View className="w-20 h-20 rounded-full bg-accent/20 border border-accent/40 items-center justify-center mb-2">
-            <Text className="text-text-primary text-3xl font-bold">
-              {child.name.charAt(0).toUpperCase()}
-            </Text>
+          <View className="relative">
+            <ChildAvatar name={child.name} avatarUrl={child.avatar_url} size="lg" hideName={true} />
+            {avatarLoading && (
+              <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
           </View>
-          <Text className="text-text-primary text-xl font-bold">{child.name}</Text>
+          <TouchableOpacity 
+            onPress={handlePickImage}
+            disabled={avatarLoading}
+            className="mt-3 bg-bg-elevated px-4 py-2 rounded-full border border-border flex-row items-center"
+          >
+            <Text className="text-accent text-sm font-semibold">📷 Change Photo</Text>
+          </TouchableOpacity>
+          <Text className="text-text-primary text-xl font-bold mt-4">{child.name}</Text>
           <Text className="text-text-muted text-xs mt-0.5">
             {child.is_active ? '✅ Active' : '⚫ Inactive'}
           </Text>

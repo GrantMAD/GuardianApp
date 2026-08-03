@@ -147,13 +147,14 @@ export default function DashboardScreen() {
         {children.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-5 py-3">
             {children.map((child) => (
-              <ChildAvatar
-                key={child.id}
-                name={child.name}
-                avatarUrl={child.avatar_url}
-                isSelected={child.id === selectedChildId}
-                onPress={() => setSelectedChildId(child.id)}
-              />
+              <View key={child.id} className="mr-4">
+                <ChildAvatar
+                  name={child.name}
+                  avatarUrl={child.avatar_url}
+                  isSelected={child.id === selectedChildId}
+                  onPress={() => setSelectedChildId(child.id)}
+                />
+              </View>
             ))}
             <TouchableOpacity
               onPress={() => router.push('/(parent)/settings/add-child')}
