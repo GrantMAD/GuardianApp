@@ -5,15 +5,20 @@ import { TopNavbar } from '@/components/ui/TopNavbar';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+  const { colors } = useAppTheme();
+
   return (
-    <View className="items-center justify-center pt-1">
-      <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
+    <View 
+      className="items-center justify-center w-20 py-1.5 rounded-2xl"
+      style={{ backgroundColor: focused ? `${colors.accent}20` : 'transparent' }}
+    >
+      <Text style={{ fontSize: 22 }}>{emoji}</Text>
       <Text
         style={{
           fontSize: 10,
           marginTop: 2,
           fontWeight: focused ? '700' : '500',
-          color: focused ? '#7C6AF5' : '#9090A8',
+          color: focused ? colors.textPrimary : colors.textMuted,
         }}
       >
         {label}
@@ -34,8 +39,9 @@ export default function ParentLayout() {
           backgroundColor: colors.bgCard,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 86,
+          paddingTop: 16,
+          paddingBottom: 16,
         },
         tabBarItemStyle: {
           flex: 1,
