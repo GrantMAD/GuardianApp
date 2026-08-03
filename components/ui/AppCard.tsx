@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { RuleBadge } from './RuleBadge';
 import { formatMinutes } from '@/utils/formatTime';
+import { KNOWN_ICONS } from '@/constants/appIcons';
 
 type RuleStatus = 'blocked' | 'limited' | 'scheduled' | 'none';
 
@@ -25,6 +26,7 @@ export function AppCard({
   onPress,
 }: AppCardProps) {
   const initial = appName.charAt(0).toUpperCase();
+  const resolvedIcon = iconUrl || (packageName ? KNOWN_ICONS[packageName] : null);
 
   return (
     <TouchableOpacity
@@ -34,8 +36,8 @@ export function AppCard({
     >
       {/* App Icon */}
       <View className="w-12 h-12 rounded-xl bg-bg-elevated items-center justify-center mr-3">
-        {iconUrl ? (
-          <Image source={{ uri: iconUrl }} className="w-10 h-10 rounded-lg" />
+        {resolvedIcon ? (
+          <Image source={{ uri: resolvedIcon }} className="w-10 h-10 rounded-lg" />
         ) : (
           <Text className="text-text-primary font-bold text-lg">{initial}</Text>
         )}

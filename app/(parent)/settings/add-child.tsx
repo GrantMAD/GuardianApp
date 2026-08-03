@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { addChild, getChildren, uploadChildAvatar } from '@/services/childService';
+import Toast from 'react-native-toast-message';
 
 export default function AddChildScreen() {
   const router = useRouter();
@@ -15,7 +16,6 @@ export default function AddChildScreen() {
 
   const [name, setName]     = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   const handlePickImage = async () => {
@@ -31,15 +31,14 @@ export default function AddChildScreen() {
         setAvatarUri(result.assets[0].uri);
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to pick image.');
+      Toast.show({ type: 'error', text1: 'Image Picker Error', text2: e.message || 'Failed to pick image.' });
     }
   };
 
   const handleAdd = async () => {
-    if (!name.trim()) { setError('Please enter a name.'); return; }
-    if (!family)      { setError('No family found. Please sign in again.'); return; }
+    if (!name.trim()) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a name.' }); return; }
+    if (!family)      { Toast.show({ type: 'error', text1: 'Session Error', text2: 'No family found. Please sign in again.' }); return; }
     setLoading(true);
-    setError('');
     try {
       const child = await addChild(family.id, name.trim());
       if (avatarUri) {
@@ -49,9 +48,10 @@ export default function AddChildScreen() {
       const updated = await getChildren(family.id);
       setChildren(updated);
       setSelectedChildId(child.id);
+      Toast.show({ type: 'success', text1: 'Child Added', text2: `${name.trim()} was successfully added.` });
       router.back();
     } catch (e: any) {
-      setError(e.message ?? 'Failed to add child.');
+      Toast.show({ type: 'error', text1: 'Add Failed', text2: e.message ?? 'Failed to add child.' });
     } finally {
       setLoading(false);
     }
@@ -99,12 +99,6 @@ export default function AddChildScreen() {
           onSubmitEditing={handleAdd}
           returnKeyType="done"
         />
-
-        {error ? (
-          <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mb-4">
-            <Text className="text-danger text-sm">{error}</Text>
-          </View>
-        ) : null}
 
         <TouchableOpacity
           id="btn-confirm-add-child"

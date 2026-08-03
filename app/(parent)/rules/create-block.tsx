@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { createRule } from '@/services/ruleService';
 import { getInstalledApps } from '@/services/usageService';
+import Toast from 'react-native-toast-message';
 
 export default function CreateBlockRuleScreen() {
   const router = useRouter();
@@ -18,7 +19,6 @@ export default function CreateBlockRuleScreen() {
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(false);
   const [appsLoaded, setAppsLoaded] = useState(false);
-  const [error, setError]       = useState('');
 
   const loadApps = async () => {
     if (!selectedChildId || appsLoaded) return;
@@ -32,14 +32,14 @@ export default function CreateBlockRuleScreen() {
   useEffect(() => { loadApps(); }, []);
 
   const handleSave = async () => {
-    if (!selectedChildId) { setError('No child selected.'); return; }
+    if (!selectedChildId) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'No child selected.' }); return; }
     setLoading(true);
-    setError('');
     try {
       await createRule(selectedChildId, 'BLOCK', selectedId);
+      Toast.show({ type: 'success', text1: 'App Blocked', text2: selectedApp ? `${selectedApp.app_name} blocked.` : 'All apps blocked.' });
       router.back();
     } catch (e: any) {
-      setError(e.message ?? 'Failed to create rule.');
+      Toast.show({ type: 'error', text1: 'Creation Failed', text2: e.message ?? 'Failed to create rule.' });
     } finally {
       setLoading(false);
     }
@@ -102,12 +102,6 @@ export default function CreateBlockRuleScreen() {
             {selectedId === a.id && <Text className="text-danger font-bold">✓</Text>}
           </TouchableOpacity>
         ))}
-
-        {error ? (
-          <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mt-4">
-            <Text className="text-danger text-sm">{error}</Text>
-          </View>
-        ) : null}
 
         <TouchableOpacity
           id="btn-save-block"

@@ -1,12 +1,15 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { COLORS } from '@/constants/theme';
+import { KNOWN_ICONS } from '@/constants/appIcons';
 import { formatMinutes } from '@/utils/formatTime';
 
 interface BarData {
   label: string;
   minutes: number;
   color?: string;
+  iconUrl?: string;
+  packageName?: string;
 }
 
 interface UsageBarChartProps {
@@ -22,12 +25,24 @@ export function UsageBarChart({ data, maxMinutes }: UsageBarChartProps) {
       {data.map((item, index) => {
         const fraction = Math.min(item.minutes / max, 1);
         const barColor = item.color ?? COLORS.accent;
+        const resolvedIcon = item.iconUrl || (item.packageName ? KNOWN_ICONS[item.packageName] : null);
 
         return (
           <View key={index} className="flex-row items-center">
+            {/* Icon */}
+            {resolvedIcon ? (
+              <Image source={{ uri: resolvedIcon }} className="w-5 h-5 mr-2 rounded-md" />
+            ) : (
+              <View className="w-5 h-5 mr-2 rounded-md bg-bg-elevated items-center justify-center">
+                <Text className="text-[10px] text-text-muted font-bold">
+                  {item.label.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
             {/* Label */}
             <Text
-              className="text-text-muted text-xs w-20"
+              className="text-text-muted text-xs w-16"
               numberOfLines={1}
             >
               {item.label}

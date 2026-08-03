@@ -11,6 +11,7 @@ import { signOut } from '@/services/authService';
 import { updateFamilyTheme } from '@/services/childService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import Toast from 'react-native-toast-message';
 
 export default function SettingsScreen() {
   const router  = useRouter();
@@ -28,6 +29,7 @@ export default function SettingsScreen() {
           await signOut();
           clearAuth();
           clearFamily();
+          Toast.show({ type: 'info', text1: 'Signed Out', text2: 'You have been signed out of your account.' });
           router.replace('/(auth)/welcome');
         },
       },
@@ -41,10 +43,11 @@ export default function SettingsScreen() {
     setTheme(newTheme);
     try {
       await updateFamilyTheme(family.id, newTheme);
+      Toast.show({ type: 'success', text1: 'Theme Updated', text2: `App theme changed to ${newTheme}.` });
     } catch (err) {
       console.error('Failed to update theme', err);
-      // Revert on fail
       setTheme(theme);
+      Toast.show({ type: 'error', text1: 'Update Failed', text2: 'Could not update theme.' });
     }
   };
 

@@ -7,6 +7,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from '@/components/ui/ToastConfig';
 
 // Theme is applied dynamically in AuthGuard using familyStore
 
@@ -63,6 +65,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthGuard />
         </QueryClientProvider>
+        <Toast config={toastConfig} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

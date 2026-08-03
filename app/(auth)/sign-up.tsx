@@ -9,6 +9,7 @@ import { signUp } from '@/services/authService';
 import { createFamily, getFamily } from '@/services/childService';
 import { useAuthStore } from '@/store/authStore';
 import { useFamilyStore } from '@/store/familyStore';
+import Toast from 'react-native-toast-message';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -19,15 +20,13 @@ export default function SignUpScreen() {
   const [password, setPassword]   = useState('');
   const [familyName, setFamilyName] = useState('');
   const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
 
   const handleSignUp = async () => {
     if (!email || !password || !familyName) {
-      setError('Please fill in all fields.');
+      Toast.show({ type: 'error', text1: 'Sign Up Failed', text2: 'Please fill in all fields.' });
       return;
     }
     setLoading(true);
-    setError('');
     try {
       const data = await signUp(email, password, familyName);
       if (data.session) {
@@ -39,10 +38,10 @@ export default function SignUpScreen() {
         setFamily(family);
         router.replace('/(parent)/dashboard');
       } else {
-        setError('Check your email to confirm your account.');
+        Toast.show({ type: 'success', text1: 'Account Created', text2: 'Check your email to confirm your account.' });
       }
     } catch (e: any) {
-      setError(e.message ?? 'Sign up failed.');
+      Toast.show({ type: 'error', text1: 'Sign Up Failed', text2: e.message ?? 'Sign up failed.' });
     } finally {
       setLoading(false);
     }
@@ -98,13 +97,6 @@ export default function SignUpScreen() {
             secureTextEntry
             className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-6"
           />
-
-          {/* Error */}
-          {error ? (
-            <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
 
           {/* Submit */}
           <TouchableOpacity

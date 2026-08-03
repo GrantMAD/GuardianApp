@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { createSchedule } from '@/services/scheduleService';
 import { DayToggle } from '@/components/ui/DayToggle';
+import Toast from 'react-native-toast-message';
 
 export default function CreateScheduleScreen() {
   const router = useRouter();
@@ -20,15 +21,13 @@ export default function CreateScheduleScreen() {
   const [scope, setScope]         = useState<'all' | 'category' | 'specific_apps'>('all');
   const [blockType, setBlockType] = useState<'block' | 'allow_only'>('block');
   const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
 
   const handleSave = async () => {
-    if (!selectedChildId) { setError('No child selected.'); return; }
-    if (!name.trim())    { setError('Please enter a schedule name.'); return; }
-    if (days.length === 0) { setError('Select at least one day.'); return; }
+    if (!selectedChildId) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'No child selected.' }); return; }
+    if (!name.trim())    { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a schedule name.' }); return; }
+    if (days.length === 0) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Select at least one day.' }); return; }
 
     setLoading(true);
-    setError('');
     try {
       await createSchedule({
         child_id: selectedChildId,
@@ -39,9 +38,10 @@ export default function CreateScheduleScreen() {
         scope,
         block_type: blockType,
       });
+      Toast.show({ type: 'success', text1: 'Schedule Created', text2: `${name.trim()} schedule is now active.` });
       router.back();
     } catch (e: any) {
-      setError(e.message ?? 'Failed to create schedule.');
+      Toast.show({ type: 'error', text1: 'Creation Failed', text2: e.message ?? 'Failed to create schedule.' });
     } finally {
       setLoading(false);
     }
@@ -147,12 +147,6 @@ export default function CreateScheduleScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-        {error ? (
-          <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mb-4">
-            <Text className="text-danger text-sm">{error}</Text>
-          </View>
-        ) : null}
 
         <TouchableOpacity
           id="btn-save-schedule"

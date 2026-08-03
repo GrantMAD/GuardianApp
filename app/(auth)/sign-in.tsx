@@ -9,6 +9,7 @@ import { signIn } from '@/services/authService';
 import { getFamily, getChildren } from '@/services/childService';
 import { useAuthStore } from '@/store/authStore';
 import { useFamilyStore } from '@/store/familyStore';
+import Toast from 'react-native-toast-message';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -18,15 +19,13 @@ export default function SignInScreen() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      setError('Please enter your email and password.');
+      Toast.show({ type: 'error', text1: 'Sign In Failed', text2: 'Please enter your email and password.' });
       return;
     }
     setLoading(true);
-    setError('');
     try {
       const data = await signIn(email, password);
       setSession(data.session);
@@ -43,7 +42,7 @@ export default function SignInScreen() {
       }
       router.replace('/(parent)/dashboard');
     } catch (e: any) {
-      setError(e.message ?? 'Sign in failed.');
+      Toast.show({ type: 'error', text1: 'Sign In Failed', text2: e.message ?? 'Sign in failed.' });
     } finally {
       setLoading(false);
     }
@@ -88,13 +87,6 @@ export default function SignInScreen() {
             secureTextEntry
             className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-6"
           />
-
-          {/* Error */}
-          {error ? (
-            <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mb-4">
-              <Text className="text-danger text-sm">{error}</Text>
-            </View>
-          ) : null}
 
           {/* Submit */}
           <TouchableOpacity

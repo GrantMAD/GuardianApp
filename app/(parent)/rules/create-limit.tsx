@@ -10,6 +10,7 @@ import { useFamilyStore } from '@/store/familyStore';
 import { createRule } from '@/services/ruleService';
 import { getInstalledApps } from '@/services/usageService';
 import { formatMinutes } from '@/utils/formatTime';
+import Toast from 'react-native-toast-message';
 
 export default function CreateTimeLimitScreen() {
   const router = useRouter();
@@ -21,7 +22,6 @@ export default function CreateTimeLimitScreen() {
   const [appSearch, setAppSearch]   = useState('');
   const [loading, setLoading]       = useState(false);
   const [appsLoading, setAppsLoading] = useState(false);
-  const [error, setError]           = useState('');
 
   const loadApps = async () => {
     if (!selectedChildId || apps.length > 0) return;
@@ -35,14 +35,14 @@ export default function CreateTimeLimitScreen() {
   };
 
   const handleSave = async () => {
-    if (!selectedChildId) { setError('No child selected.'); return; }
+    if (!selectedChildId) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'No child selected.' }); return; }
     setLoading(true);
-    setError('');
     try {
       await createRule(selectedChildId, 'TIME_LIMIT', appId, undefined, limitMins);
+      Toast.show({ type: 'success', text1: 'Time Limit Created', text2: `Set to ${formatMinutes(limitMins)}.` });
       router.back();
     } catch (e: any) {
-      setError(e.message ?? 'Failed to create rule.');
+      Toast.show({ type: 'error', text1: 'Creation Failed', text2: e.message ?? 'Failed to create rule.' });
     } finally {
       setLoading(false);
     }
@@ -118,12 +118,6 @@ export default function CreateTimeLimitScreen() {
             {appId === a.id && <Text className="text-accent">✓</Text>}
           </TouchableOpacity>
         ))}
-
-        {error ? (
-          <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mt-4">
-            <Text className="text-danger text-sm">{error}</Text>
-          </View>
-        ) : null}
 
         <TouchableOpacity
           id="btn-save-limit"

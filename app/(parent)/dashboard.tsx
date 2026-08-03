@@ -128,6 +128,8 @@ export default function DashboardScreen() {
     label: u.installed_apps?.app_name ?? 'Unknown',
     minutes: u.usage_minutes,
     color: CATEGORY_COLORS[u.installed_apps?.category as keyof typeof CATEGORY_COLORS] ?? '#7C6AF5',
+    iconUrl: u.installed_apps?.icon_url,
+    packageName: u.installed_apps?.package_name,
   }));
 
   return (

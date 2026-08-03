@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { consumePairingCode } from '@/services/pairingService';
 import { useAuthStore } from '@/store/authStore';
+import Toast from 'react-native-toast-message';
 
 export default function ChildPairingScreen() {
   const router = useRouter();
@@ -14,7 +15,6 @@ export default function ChildPairingScreen() {
 
   const [code, setCode]       = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
   const refs = useRef<TextInput[]>([]);
 
   const handleInput = (text: string, index: number) => {
@@ -34,17 +34,17 @@ export default function ChildPairingScreen() {
   const handlePair = async () => {
     const fullCode = code.join('');
     if (fullCode.length < 6) {
-      setError('Please enter the full 6-digit code.');
+      Toast.show({ type: 'error', text1: 'Pairing Failed', text2: 'Please enter the full 6-digit code.' });
       return;
     }
     setLoading(true);
-    setError('');
     try {
       await consumePairingCode(fullCode, 'Android Device', 'android');
       setRole('child');
+      Toast.show({ type: 'success', text1: 'Device Paired', text2: 'Welcome to GuardianApp.' });
       router.replace('/(child)/home');
     } catch (e: any) {
-      setError('Invalid or expired code. Please try again.');
+      Toast.show({ type: 'error', text1: 'Pairing Failed', text2: 'Invalid or expired code. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -82,13 +82,6 @@ export default function ChildPairingScreen() {
           />
         ))}
       </View>
-
-      {/* Error */}
-      {error ? (
-        <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mb-4">
-          <Text className="text-danger text-sm">{error}</Text>
-        </View>
-      ) : null}
 
       {/* Submit */}
       <TouchableOpacity

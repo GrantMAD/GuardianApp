@@ -11,6 +11,7 @@ import { supabase } from '@/services/supabase';
 import { getChildren, uploadChildAvatar } from '@/services/childService';
 import { generatePairingCode } from '@/services/pairingService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
+import Toast from 'react-native-toast-message';
 
 export default function ChildProfileScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
@@ -24,7 +25,6 @@ export default function ChildProfileScreen() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
   const [avatarLoading, setAvatarLoading]   = useState(false);
-  const [error, setError]       = useState('');
 
   const handlePickImage = async () => {
     try {
@@ -42,27 +42,28 @@ export default function ChildProfileScreen() {
           const updated = await getChildren(family.id);
           setChildren(updated);
         }
+        Toast.show({ type: 'success', text1: 'Photo Updated', text2: 'Avatar changed successfully.' });
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to upload image.');
+      Toast.show({ type: 'error', text1: 'Upload Failed', text2: e.message || 'Failed to upload image.' });
     } finally {
       setAvatarLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Name cannot be empty.'); return; }
+    if (!name.trim()) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Name cannot be empty.' }); return; }
     setSaving(true);
-    setError('');
     try {
       await supabase.from('children').update({ name: name.trim() }).eq('id', childId);
       if (family) {
         const updated = await getChildren(family.id);
         setChildren(updated);
       }
+      Toast.show({ type: 'success', text1: 'Profile Saved', text2: 'Child profile updated successfully.' });
       router.back();
     } catch (e: any) {
-      setError(e.message ?? 'Failed to save.');
+      Toast.show({ type: 'error', text1: 'Save Failed', text2: e.message ?? 'Failed to save.' });
     } finally {
       setSaving(false);
     }
@@ -74,8 +75,9 @@ export default function ChildProfileScreen() {
     try {
       const code = await generatePairingCode(family.id);
       setPairingCode(code);
+      Toast.show({ type: 'success', text1: 'Code Generated', text2: 'Pairing code generated successfully.' });
     } catch {
-      Alert.alert('Error', 'Could not generate pairing code. Make sure the Edge Function is deployed.');
+      Toast.show({ type: 'error', text1: 'Generation Failed', text2: 'Could not generate pairing code. Make sure the Edge Function is deployed.' });
     } finally {
       setPairingLoading(false);
     }
@@ -96,6 +98,7 @@ export default function ChildProfileScreen() {
               const updated = await getChildren(family.id);
               setChildren(updated);
             }
+            Toast.show({ type: 'success', text1: 'Child Deactivated', text2: 'Child profile deactivated.' });
             router.back();
           },
         },
@@ -150,12 +153,6 @@ export default function ChildProfileScreen() {
           onChangeText={setName}
           className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-5"
         />
-
-        {error ? (
-          <View className="bg-danger/20 border border-danger/40 rounded-xl p-3 mb-4">
-            <Text className="text-danger text-sm">{error}</Text>
-          </View>
-        ) : null}
 
         <TouchableOpacity
           id="btn-save-child"
