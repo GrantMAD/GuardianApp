@@ -75,7 +75,11 @@ export default function RulesScreen() {
         ) : (
           <>
             {/* Time Limits */}
-            <SectionHeader title={`Time Limits (${timeLimits.length})`} icon="⏳" />
+            <SectionHeader 
+              title={`Time Limits (${timeLimits.length})`} 
+              icon="⏳" 
+              description="Set daily usage limits for specific apps or categories."
+            />
             {timeLimits.length === 0 ? (
               <Text className="text-text-muted text-sm text-center py-4">No time limits set</Text>
             ) : timeLimits.map((r) => (
@@ -93,7 +97,11 @@ export default function RulesScreen() {
             ))}
 
             {/* Block Rules */}
-            <SectionHeader title={`Blocked Apps (${blockRules.length})`} icon="🛑" />
+            <SectionHeader 
+              title={`Blocked Apps (${blockRules.length})`} 
+              icon="🛑" 
+              description="Apps that are completely restricted from use."
+            />
             {blockRules.length === 0 ? (
               <Text className="text-text-muted text-sm text-center py-4">No apps blocked</Text>
             ) : blockRules.map((r) => (

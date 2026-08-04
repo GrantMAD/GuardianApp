@@ -6,19 +6,25 @@ interface SectionHeaderProps {
   icon?: string;
   actionLabel?: string;
   onAction?: () => void;
+  description?: string;
 }
 
-export function SectionHeader({ title, icon, actionLabel, onAction }: SectionHeaderProps) {
+export function SectionHeader({ title, icon, actionLabel, onAction, description }: SectionHeaderProps) {
   return (
-    <View className="flex-row justify-between items-center my-4">
-      <View className="flex-row items-center">
-        {icon && <Text className="text-xl mr-2">{icon}</Text>}
-        <Text className="text-text-primary text-lg font-bold">{title}</Text>
+    <View className="my-4">
+      <View className="flex-row justify-between items-center">
+        <View className="flex-row items-center">
+          {icon && <Text className="text-xl mr-2">{icon}</Text>}
+          <Text className="text-text-primary text-lg font-bold">{title}</Text>
+        </View>
+        {actionLabel && onAction && (
+          <TouchableOpacity onPress={onAction}>
+            <Text className="text-accent text-sm font-bold">{actionLabel}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      {actionLabel && onAction && (
-        <TouchableOpacity onPress={onAction}>
-          <Text className="text-accent text-sm font-bold">{actionLabel}</Text>
-        </TouchableOpacity>
+      {description && (
+        <Text className="text-text-muted text-sm mt-1">{description}</Text>
       )}
     </View>
   );

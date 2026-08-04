@@ -186,7 +186,11 @@ export default function DashboardScreen() {
 
         {pendingRequests.length > 0 && (
           <View className="px-5 mt-4">
-            <SectionHeader title="Pending Requests" icon="🔔" />
+            <SectionHeader 
+              title="Pending Requests" 
+              icon="🔔" 
+              description="Approve or deny extra time requests."
+            />
             {pendingRequests.map(req => (
               <PermissionRequestCard
                 key={req.id}
@@ -216,6 +220,7 @@ export default function DashboardScreen() {
             <SectionHeader
               title="Top Apps Today"
               icon="📱"
+              description="Most used applications for the current day."
               actionLabel="See all"
               onAction={() => router.push('/(parent)/apps')}
             />
@@ -232,7 +237,11 @@ export default function DashboardScreen() {
             )}
 
             {/* Quick actions */}
-            <SectionHeader title="Quick Actions" icon="⚡" />
+            <SectionHeader 
+              title="Quick Actions" 
+              icon="⚡" 
+              description="Fast access to common management tools."
+            />
             <View className="flex-row gap-x-3 mb-8">
               <TouchableOpacity
                 id="btn-add-rule"
