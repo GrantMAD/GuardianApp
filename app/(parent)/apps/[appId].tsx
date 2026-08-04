@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, Switch, TouchableOpacity,
-  StatusBar, ActivityIndicator,
+  StatusBar, ActivityIndicator, Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
-import { getDailyUsage } from '@/services/usageService';
+import { getDailyUsage, getInstalledApps } from '@/services/usageService';
 import { getRules, createRule, deleteRule } from '@/services/ruleService';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { TimeRing } from '@/components/ui/TimeRing';
 import { formatMinutes } from '@/utils/formatTime';
+import { KNOWN_ICONS } from '@/constants/appIcons';
 
 export default function AppDetailScreen() {
   const { appId } = useLocalSearchParams<{ appId: string }>();
@@ -29,15 +30,18 @@ export default function AppDetailScreen() {
     setLoading(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const [allRules, todayUsage] = await Promise.all([
+      const [allRules, todayUsage, installedApps] = await Promise.all([
         getRules(selectedChildId),
         getDailyUsage(selectedChildId, today),
+        getInstalledApps(selectedChildId),
       ]);
       const appRules = allRules.filter((r) => r.app_id === appId);
       setRules(appRules);
       const todayEntry = todayUsage?.find((u: any) => u.app_id === appId);
       setTodayMins(todayEntry?.usage_minutes ?? 0);
-      if (todayEntry?.installed_apps) setAppInfo(todayEntry.installed_apps);
+      
+      const info = installedApps?.find((a: any) => a.id === appId);
+      if (info) setAppInfo(info);
 
       // Build last 7 days chart data
       const bars: any[] = [];
@@ -82,16 +86,23 @@ export default function AppDetailScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5">
         {/* Back */}
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-4">
+        <TouchableOpacity onPress={() => router.push('/(parent)/apps')} className="mt-4 mb-4">
           <Text className="text-text-muted text-base">← Back</Text>
         </TouchableOpacity>
 
         {/* App header */}
         <View className="flex-row items-center bg-bg-card rounded-2xl p-4 border border-border mb-4">
           <View className="w-14 h-14 rounded-xl bg-bg-elevated items-center justify-center mr-4">
-            <Text className="text-text-primary text-2xl font-bold">
-              {(appInfo?.app_name ?? '?').charAt(0)}
-            </Text>
+            {(appInfo?.icon_url || KNOWN_ICONS[appInfo?.package_name]) ? (
+              <Image
+                source={{ uri: appInfo?.icon_url || KNOWN_ICONS[appInfo?.package_name] }}
+                style={{ width: 44, height: 44, borderRadius: 10 }}
+              />
+            ) : (
+              <Text className="text-text-primary text-2xl font-bold">
+                {(appInfo?.app_name ?? '?').charAt(0)}
+              </Text>
+            )}
           </View>
           <View className="flex-1">
             <Text className="text-text-primary font-bold text-lg">{appInfo?.app_name ?? 'Unknown App'}</Text>
