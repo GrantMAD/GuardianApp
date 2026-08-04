@@ -70,9 +70,9 @@ export default function ReportsScreen() {
         className="flex-1 px-5"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#7C6AF5" />}
       >
-        <Text className="text-text-primary text-2xl font-bold pt-4 pb-1">Reports</Text>
+        <Text className="text-text-primary text-2xl font-bold pt-4 pb-1">📈 Reports</Text>
         {selectedChild && (
-          <Text className="text-text-muted text-sm mb-5">7-day overview for {selectedChild.name}</Text>
+          <Text className="text-text-muted text-sm mb-5">Review screen time and app usage for {selectedChild.name} over the last 7 days.</Text>
         )}
 
         {loading ? (
@@ -90,7 +90,7 @@ export default function ReportsScreen() {
             </View>
 
             {/* Daily breakdown chart */}
-            <SectionHeader title="Daily Screen Time" />
+            <SectionHeader title="Daily Screen Time" icon="📊" />
             <View className="bg-bg-card rounded-2xl p-4 border border-border mb-4">
               {weekBarData.every((d) => d.minutes === 0) ? (
                 <Text className="text-text-muted text-sm text-center py-4">No usage data for this period.</Text>
@@ -100,7 +100,7 @@ export default function ReportsScreen() {
             </View>
 
             {/* Top apps */}
-            <SectionHeader title="Top Apps This Week" />
+            <SectionHeader title="Top Apps This Week" icon="📱" />
             {topApps.length === 0 ? (
               <View className="bg-bg-card rounded-2xl p-6 border border-border items-center mb-4">
                 <Text className="text-text-muted text-sm">No app data yet.</Text>
@@ -112,7 +112,7 @@ export default function ReportsScreen() {
             )}
 
             {/* Per-day breakdown */}
-            <SectionHeader title="Day by Day" />
+            <SectionHeader title="Day by Day" icon="📅" />
             {weekData.map((day) => (
               <View key={day.date} className="bg-bg-card rounded-2xl p-4 border border-border mb-3">
                 <View className="flex-row justify-between items-center mb-2">

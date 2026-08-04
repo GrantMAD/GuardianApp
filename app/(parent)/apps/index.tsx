@@ -17,7 +17,8 @@ type RuleStatus = 'blocked' | 'limited' | 'scheduled' | 'none';
 
 export default function AppListScreen() {
   const router = useRouter();
-  const { selectedChildId } = useFamilyStore();
+  const { selectedChildId, children } = useFamilyStore();
+  const selectedChild = children.find((c) => c.id === selectedChildId);
 
   const [apps, setApps]           = useState<any[]>([]);
   const [usage, setUsage]         = useState<Record<string, number>>({});
@@ -68,7 +69,10 @@ export default function AppListScreen() {
 
       {/* Header */}
       <View className="px-5 pt-4 pb-2">
-        <Text className="text-text-primary text-2xl font-bold mb-3">Installed Apps</Text>
+        <Text className="text-text-primary text-2xl font-bold">📱 Installed Apps</Text>
+        {selectedChild && (
+          <Text className="text-text-muted text-sm mb-4">View and manage all applications installed on {selectedChild.name}'s device.</Text>
+        )}
         <TextInput
           id="search-apps"
           value={search}

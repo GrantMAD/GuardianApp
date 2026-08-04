@@ -115,7 +115,7 @@ export default function AppDetailScreen() {
         )}
 
         {/* Weekly chart */}
-        <SectionHeader title="Last 7 Days" />
+        <SectionHeader title="Last 7 Days" icon="📆" />
         <View className="bg-bg-card rounded-2xl p-4 border border-border mb-4">
           <UsageBarChart data={weekData} />
         </View>
@@ -123,6 +123,7 @@ export default function AppDetailScreen() {
         {/* Rules */}
         <SectionHeader
           title="Rules"
+          icon="🛡️"
           actionLabel="Add Limit"
           onAction={() => router.push('/(parent)/rules/create-limit')}
         />

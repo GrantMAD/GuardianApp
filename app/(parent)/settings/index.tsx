@@ -73,6 +73,7 @@ export default function SettingsScreen() {
         {/* Children */}
         <SectionHeader
           title="Children"
+          icon="👥"
           actionLabel="+ Add Child"
           onAction={() => router.push('/(parent)/settings/add-child')}
         />
@@ -109,7 +110,7 @@ export default function SettingsScreen() {
         )}
 
         {/* General settings */}
-        <SectionHeader title="General" />
+        <SectionHeader title="General" icon="⚙️" />
         <View className="bg-bg-card rounded-2xl border border-border mb-5 overflow-hidden">
           <TouchableOpacity
             id="settings-theme"

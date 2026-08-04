@@ -37,9 +37,9 @@ export default function RulesScreen() {
     <SafeAreaView className="flex-1 bg-bg-primary">
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5">
-        <Text className="text-text-primary text-2xl font-bold pt-4 pb-1">Rules</Text>
+        <Text className="text-text-primary text-2xl font-bold pt-4 pb-1">⚙️ Rules</Text>
         {selectedChild && (
-          <Text className="text-text-muted text-sm mb-4">for {selectedChild.name}</Text>
+          <Text className="text-text-muted text-sm mb-4">Manage time limits and block apps for {selectedChild.name}.</Text>
         )}
 
         {/* Create buttons */}
@@ -75,7 +75,7 @@ export default function RulesScreen() {
         ) : (
           <>
             {/* Time Limits */}
-            <SectionHeader title={`Time Limits (${timeLimits.length})`} />
+            <SectionHeader title={`Time Limits (${timeLimits.length})`} icon="⏳" />
             {timeLimits.length === 0 ? (
               <Text className="text-text-muted text-sm text-center py-4">No time limits set</Text>
             ) : timeLimits.map((r) => (
@@ -93,7 +93,7 @@ export default function RulesScreen() {
             ))}
 
             {/* Block Rules */}
-            <SectionHeader title={`Blocked Apps (${blockRules.length})`} />
+            <SectionHeader title={`Blocked Apps (${blockRules.length})`} icon="🛑" />
             {blockRules.length === 0 ? (
               <Text className="text-text-muted text-sm text-center py-4">No apps blocked</Text>
             ) : blockRules.map((r) => (
