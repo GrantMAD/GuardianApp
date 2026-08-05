@@ -1,27 +1,36 @@
 import { supabase } from './supabase';
 
 /**
- * Invokes the 'generate-pairing-code' edge function
- * to create a new 6-digit code for linking a child device.
+ * Calls the generate_pairing_code Postgres RPC to create a new 6-character
+ * alphanumeric code for linking a child device. Code expires in 24 hours.
  */
-export async function generatePairingCode(familyId: string) {
-  const { data, error } = await supabase.functions.invoke('generate-pairing-code', {
-    body: { familyId },
+export async function generatePairingCode(familyId: string, childId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('generate_pairing_code', {
+    p_family_id: familyId,
+    p_child_id:  childId,
   });
 
   if (error) throw error;
-  return data.pairingCode as string;
+  return data as string;
 }
 
 /**
- * Invokes the 'child-auth-token' edge function
- * to consume a 6-digit code and get a JWT for the child device.
+ * Calls the consume_pairing_code Postgres RPC to validate the code,
+ * create a child device record, and return { child_id, family_id }.
  */
-export async function consumePairingCode(pairingCode: string, deviceName: string, osType: 'android' | 'ios') {
-  const { data, error } = await supabase.functions.invoke('child-auth-token', {
-    body: { pairingCode, deviceName, osType },
+export async function consumePairingCode(
+  pairingCode: string,
+  deviceName: string,
+  osType: 'android' | 'ios',
+  deviceId: string = 'web-device',
+) {
+  const { data, error } = await supabase.rpc('consume_pairing_code', {
+    p_code:        pairingCode,
+    p_device_name: deviceName,
+    p_os_type:     osType,
+    p_device_id:   deviceId,
   });
 
   if (error) throw error;
-  return data; // { token: string, childId: string, familyId: string }
+  return data as { child_id: string; family_id: string };
 }

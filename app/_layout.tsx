@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
 function AuthGuard() {
   const router = useRouter();
   const segments = useSegments();
-  const { session, role, setSession, setUser } = useAuthStore();
+  const { session, role, childId, setSession, setUser } = useAuthStore();
   const { theme } = require('@/store/familyStore').useFamilyStore();
 
   useEffect(() => {
@@ -44,16 +44,19 @@ function AuthGuard() {
     const inAuth  = segments[0] === '(auth)';
     const inChild = segments[0] === '(child)';
 
-    if (!session && !inAuth) {
+    // A paired child device has no Supabase session but has role + childId
+    const isPairedChild = role === 'child' && childId;
+
+    if (!session && !isPairedChild && !inAuth) {
       router.replace('/(auth)/welcome');
-    } else if (session && inAuth) {
+    } else if ((session || isPairedChild) && inAuth) {
       if (role === 'child') {
         router.replace('/(child)/home');
       } else {
         router.replace('/(parent)/dashboard');
       }
     }
-  }, [session, role, segments]);
+  }, [session, role, childId, segments]);
 
   return <Slot />;
 }

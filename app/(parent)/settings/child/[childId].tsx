@@ -70,14 +70,14 @@ export default function ChildProfileScreen() {
   };
 
   const handleGeneratePairing = async () => {
-    if (!family) return;
+    if (!family || !childId) return;
     setPairingLoading(true);
     try {
-      const code = await generatePairingCode(family.id);
+      const code = await generatePairingCode(family.id, childId);
       setPairingCode(code);
       Toast.show({ type: 'success', text1: 'Code Generated', text2: 'Pairing code generated successfully.' });
-    } catch {
-      Toast.show({ type: 'error', text1: 'Generation Failed', text2: 'Could not generate pairing code. Make sure the Edge Function is deployed.' });
+    } catch (e: any) {
+      Toast.show({ type: 'error', text1: 'Generation Failed', text2: e.message ?? 'Could not generate pairing code.' });
     } finally {
       setPairingLoading(false);
     }

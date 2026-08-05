@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { consumePairingCode } from '@/services/pairingService';
 import { useAuthStore } from '@/store/authStore';
+import { useFamilyStore } from '@/store/familyStore';
+import { supabase } from '@/services/supabase';
 import Toast from 'react-native-toast-message';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
@@ -90,7 +92,8 @@ function DigitBox({
         value={digit}
         onChangeText={(t) => onChange(t, index)}
         onKeyPress={(e) => onKeyPress(e, index)}
-        keyboardType="number-pad"
+        keyboardType="default"
+        autoCapitalize="characters"
         maxLength={1}
         selectTextOnFocus
         style={[
@@ -109,7 +112,8 @@ function DigitBox({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ChildPairingScreen() {
   const router = useRouter();
-  const { setRole } = useAuthStore();
+  const { setRole, setChildId, setFamilyId, setSession, setUser } = useAuthStore();
+  const { setSelectedChildId } = useFamilyStore();
   const { colors, isDark } = useAppTheme();
 
   const [code, setCode]         = useState(['', '', '', '', '', '']);
@@ -120,11 +124,12 @@ export default function ChildPairingScreen() {
   const codeComplete = code.join('').length === 6;
 
   const handleInput = (text: string, index: number) => {
-    if (!/^\d*$/.test(text)) return;
+    // Allow letters and numbers only, auto-uppercase
+    const clean = text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     const next = [...code];
-    next[index] = text.slice(-1);
+    next[index] = clean.slice(-1);
     setCode(next);
-    if (text && index < 5) refs.current[index + 1]?.focus();
+    if (clean && index < 5) refs.current[index + 1]?.focus();
   };
 
   const handleKeyPress = ({ nativeEvent }: any, index: number) => {
@@ -141,12 +146,28 @@ export default function ChildPairingScreen() {
     }
     setLoading(true);
     try {
-      await consumePairingCode(fullCode, 'Android Device', 'android');
+      // Step 1: Sign in anonymously so the child device has a real Supabase
+      // session. The RPC will use auth.uid() to link this user to the child row.
+      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
+      if (anonError) throw anonError;
+
+      // Step 2: Consume the pairing code — RPC stores auth.uid() on the child
+      const result = await consumePairingCode(fullCode, 'Android Device', 'android');
+
+      // Step 3: Persist session and identifiers
+      setSession(anonData.session);
+      setUser(anonData.user);
       setRole('child');
+      setChildId(result.child_id);
+      setFamilyId(result.family_id);
+      setSelectedChildId(result.child_id);
+
       Toast.show({ type: 'success', text1: 'Device Paired', text2: 'Welcome to GuardianApp.' });
       router.replace('/(child)/home');
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Pairing Failed', text2: 'Invalid or expired code. Please try again.' });
+      // If pairing failed after anon sign-in, clean up the orphaned anon user
+      await supabase.auth.signOut();
+      Toast.show({ type: 'error', text1: 'Pairing Failed', text2: e.message ?? 'Invalid or expired code. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -184,7 +205,7 @@ export default function ChildPairingScreen() {
       {/* Title */}
       <Text style={[styles.title, { color: colors.textPrimary }]}>Pair this device</Text>
       <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-        Ask your parent for the 6-digit pairing code shown in their Guardian dashboard.
+        Ask your parent for the 6-character pairing code shown in their Guardian dashboard.
       </Text>
 
       {/* Code input */}
