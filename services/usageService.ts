@@ -45,14 +45,18 @@ export async function getDailyScreenTimeSummary(childId: string, date: string) {
   return data as DailyScreenTime | null;
 }
 
-export async function getInstalledApps(childId: string) {
-  const { data, error } = await supabase
+export async function getInstalledApps(childId: string, visibleOnly: boolean = true) {
+  let query = supabase
     .from('installed_apps')
     .select('*')
     .eq('child_id', childId)
-    .eq('is_visible', true)
     .order('app_name');
 
+  if (visibleOnly) {
+    query = query.eq('is_visible', true);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }

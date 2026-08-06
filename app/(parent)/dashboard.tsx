@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { useAuthStore } from '@/store/authStore';
 import { getFamily, getChildren, createFamily } from '@/services/childService';
-import { getDailyUsage, getDailyScreenTimeSummary } from '@/services/usageService';
+import { getDailyUsage, getDailyScreenTimeSummary, getInstalledApps } from '@/services/usageService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { StatCard } from '@/components/ui/StatCard';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
@@ -52,6 +52,7 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing]   = useState(false);
   const [usageData, setUsageData]     = useState<any[]>([]);
+  const [installedApps, setInstalledApps] = useState<any[]>([]);
   const [totalMins, setTotalMins]     = useState<number | null>(null);
   const [loading, setLoading]         = useState(true);
   const [pendingRequests, setPendingRequests] = useState<PermissionRequest[]>([]);
@@ -92,11 +93,13 @@ export default function DashboardScreen() {
         setPendingRequests(reqs);
       }
       if (selectedChildId) {
-        const [usage, summary] = await Promise.all([
+        const [usage, summary, apps] = await Promise.all([
           getDailyUsage(selectedChildId, today),
           getDailyScreenTimeSummary(selectedChildId, today),
+          getInstalledApps(selectedChildId, false),
         ]);
         setUsageData(usage ?? []);
+        setInstalledApps(apps ?? []);
         setTotalMins(summary?.total_minutes ?? 0);
       }
     } finally {
@@ -124,13 +127,22 @@ export default function DashboardScreen() {
     }
   };
 
-  const chartData = usageData.slice(0, 5).map((u: any) => ({
-    label: u.installed_apps?.app_name ?? 'Unknown',
-    minutes: u.usage_minutes,
-    color: CATEGORY_COLORS[u.installed_apps?.category as keyof typeof CATEGORY_COLORS] ?? '#7C6AF5',
-    iconUrl: u.installed_apps?.icon_url,
-    packageName: u.installed_apps?.package_name,
-  }));
+  const installedAppMap = new Map(installedApps.map((app: any) => [app.id, app]));
+  const chartData = usageData.slice(0, 5).map((u: any) => {
+    const fallbackApp = installedAppMap.get(u.app_id);
+    const appName = u.installed_apps?.app_name ?? fallbackApp?.app_name;
+    const packageName = u.installed_apps?.package_name ?? fallbackApp?.package_name;
+    const category = u.installed_apps?.category ?? fallbackApp?.category;
+    const iconUrl = u.installed_apps?.icon_url ?? fallbackApp?.icon_url;
+
+    return {
+      label: appName ?? 'Unknown',
+      minutes: u.usage_minutes,
+      color: CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS] ?? '#7C6AF5',
+      iconUrl,
+      packageName,
+    };
+  });
 
   return (
     <SafeAreaView className="flex-1 bg-bg-primary">
