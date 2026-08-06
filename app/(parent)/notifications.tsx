@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StatusBar, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { useFamilyStore } from '@/store/familyStore';
+import BackButton from '@/components/ui/BackButton';
 
 interface NotificationLog {
   id: string;
@@ -84,12 +85,7 @@ export default function NotificationsScreen() {
       
       {/* Header */}
       <View className="flex-row items-center px-5 py-4 border-b border-border">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-10 h-10 bg-bg-elevated rounded-full items-center justify-center mr-3"
-        >
-          <Text className="text-text-primary text-lg">←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} variant="header" />
         <Text className="text-text-primary text-xl font-bold">Notifications</Text>
       </View>
 

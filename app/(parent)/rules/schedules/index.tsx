@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { getSchedules, deleteSchedule, toggleSchedule } from '@/services/scheduleService';
 import { ScheduleCard } from '@/components/ui/ScheduleCard';
+import BackButton from '@/components/ui/BackButton';
 
 export default function ScheduleListScreen() {
   const router = useRouter();
@@ -35,10 +36,8 @@ export default function ScheduleListScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 pt-4 pb-2">
         <View>
-          <TouchableOpacity onPress={() => router.back()} className="mb-2">
-            <Text className="text-text-muted text-base">← Back</Text>
-          </TouchableOpacity>
-          <Text className="text-text-primary text-2xl font-bold">Schedules</Text>
+          <BackButton onPress={() => router.back()} />
+          <Text className="text-text-primary text-2xl font-bold mt-2">Schedules</Text>
           <Text className="text-text-muted text-sm">Timed app blocking windows</Text>
         </View>
         <TouchableOpacity

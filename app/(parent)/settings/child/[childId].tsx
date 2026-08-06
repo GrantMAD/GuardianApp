@@ -12,6 +12,7 @@ import { getChildren, uploadChildAvatar } from '@/services/childService';
 import { generatePairingCode } from '@/services/pairingService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import Toast from 'react-native-toast-message';
+import BackButton from '@/components/ui/BackButton';
 
 export default function ChildProfileScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
@@ -118,9 +119,7 @@ export default function ChildProfileScreen() {
     <SafeAreaView className="flex-1 bg-bg-primary">
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5">
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-6">
-          <Text className="text-text-muted text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
 
         {/* Avatar */}
         <View className="items-center mb-6">

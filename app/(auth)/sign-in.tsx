@@ -10,6 +10,7 @@ import { getFamily, getChildren } from '@/services/childService';
 import { useAuthStore } from '@/store/authStore';
 import { useFamilyStore } from '@/store/familyStore';
 import Toast from 'react-native-toast-message';
+import BackButton from '@/components/ui/BackButton';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -55,60 +56,68 @@ export default function SignInScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <ScrollView className="flex-1 px-8" keyboardShouldPersistTaps="handled">
-          <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-8">
-            <Text className="text-text-muted text-base">← Back</Text>
-          </TouchableOpacity>
+        {/* Back button — stays top-left, outside the centered content */}
+        <View className="mt-2 mx-8">
+          <BackButton onPress={() => router.back()} />
+        </View>
 
-          <Text className="text-text-primary text-3xl font-bold mb-1">Welcome back</Text>
-          <Text className="text-text-muted text-sm mb-8">Sign in to your parent account.</Text>
+        <ScrollView
+          className="flex-1 px-8"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        >
+          {/* Centered form content */}
+          <View className="items-center w-full">
+            <Text className="text-text-primary text-3xl font-bold mb-1 text-center">Welcome back</Text>
+            <Text className="text-text-muted text-sm mb-8 text-center">Sign in to your parent account.</Text>
 
-          {/* Email */}
-          <Text className="text-text-muted text-sm font-medium mb-2">Email address</Text>
-          <TextInput
-            id="input-email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="parent@email.com"
-            placeholderTextColor="#9090A8"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-4"
-          />
+            {/* Email */}
+            <Text className="text-text-muted text-sm font-medium mb-2 self-start">Email address</Text>
+            <TextInput
+              id="input-email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="parent@email.com"
+              placeholderTextColor="#9090A8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-4 w-full"
+            />
 
-          {/* Password */}
-          <Text className="text-text-muted text-sm font-medium mb-2">Password</Text>
-          <TextInput
-            id="input-password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Your password"
-            placeholderTextColor="#9090A8"
-            secureTextEntry
-            className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-6"
-          />
+            {/* Password */}
+            <Text className="text-text-muted text-sm font-medium mb-2 self-start">Password</Text>
+            <TextInput
+              id="input-password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Your password"
+              placeholderTextColor="#9090A8"
+              secureTextEntry
+              className="bg-bg-card border border-border rounded-2xl px-4 py-4 text-text-primary text-base mb-6 w-full"
+            />
 
-          {/* Submit */}
-          <TouchableOpacity
-            id="btn-sign-in"
-            onPress={handleSignIn}
-            disabled={loading}
-            className="bg-accent py-4 rounded-2xl items-center mb-4"
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-bold text-base">Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Sign up link */}
-          <View className="flex-row justify-center mb-8">
-            <Text className="text-text-muted text-sm">Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.replace('/(auth)/sign-up')}>
-              <Text className="text-accent text-sm font-semibold">Create one</Text>
+            {/* Submit */}
+            <TouchableOpacity
+              id="btn-sign-in"
+              onPress={handleSignIn}
+              disabled={loading}
+              className="bg-accent py-4 rounded-2xl items-center mb-4 w-full"
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white font-bold text-base">Sign In</Text>
+              )}
             </TouchableOpacity>
+
+            {/* Sign up link */}
+            <View className="flex-row justify-center mb-8">
+              <Text className="text-text-muted text-sm">Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.replace('/(auth)/sign-up')}>
+                <Text className="text-accent text-sm font-semibold">Create one</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

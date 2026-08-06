@@ -13,6 +13,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { TimeRing } from '@/components/ui/TimeRing';
 import { formatMinutes } from '@/utils/formatTime';
 import { KNOWN_ICONS } from '@/constants/appIcons';
+import BackButton from '@/components/ui/BackButton';
 
 export default function AppDetailScreen() {
   const { appId } = useLocalSearchParams<{ appId: string }>();
@@ -86,9 +87,7 @@ export default function AppDetailScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5">
         {/* Back */}
-        <TouchableOpacity onPress={() => router.push('/(parent)/apps')} className="mt-4 mb-4">
-          <Text className="text-text-muted text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.push('/(parent)/apps')} />
 
         {/* App header */}
         <View className="flex-row items-center bg-bg-card rounded-2xl p-4 border border-border mb-4">

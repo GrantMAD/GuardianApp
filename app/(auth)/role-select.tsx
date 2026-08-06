@@ -17,6 +17,7 @@ import Svg, {
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, Easing,
 } from 'react-native-reanimated';
+import BackButton from '@/components/ui/BackButton';
 
 const { width } = Dimensions.get('window');
 
@@ -142,9 +143,7 @@ export default function RoleSelectScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} id="btn-back">
-          <Text style={[styles.backArrow, { color: colors.textMuted }]}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} id="btn-back" />
       </View>
 
       {/* Title block */}

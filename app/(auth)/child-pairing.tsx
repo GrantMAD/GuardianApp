@@ -21,6 +21,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSequence,
   withTiming, withSpring, Easing,
 } from 'react-native-reanimated';
+import BackButton from '@/components/ui/BackButton';
 
 // ─── Gradient button ──────────────────────────────────────────────────────────
 function GradientButton({
@@ -181,9 +182,8 @@ export default function ChildPairingScreen() {
       />
 
       {/* Back */}
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} id="btn-back">
-        <Text style={[styles.backArrow, { color: colors.textMuted }]}>←</Text>
-      </TouchableOpacity>
+      <BackButton onPress={() => router.back()} id="btn-back" />
+
 
       {/* Icon badge */}
       <View style={[

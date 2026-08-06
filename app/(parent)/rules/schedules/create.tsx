@@ -9,6 +9,7 @@ import { useFamilyStore } from '@/store/familyStore';
 import { createSchedule } from '@/services/scheduleService';
 import { DayToggle } from '@/components/ui/DayToggle';
 import Toast from 'react-native-toast-message';
+import BackButton from '@/components/ui/BackButton';
 
 export default function CreateScheduleScreen() {
   const router = useRouter();
@@ -51,9 +52,7 @@ export default function CreateScheduleScreen() {
     <SafeAreaView className="flex-1 bg-bg-primary">
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-6">
-          <Text className="text-text-muted text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
 
         <Text className="text-text-primary text-2xl font-bold mb-1">New Schedule</Text>
         <Text className="text-text-muted text-sm mb-8">Block apps automatically during a time window.</Text>

@@ -9,6 +9,7 @@ import { useFamilyStore } from '@/store/familyStore';
 import { createRule } from '@/services/ruleService';
 import { getInstalledApps } from '@/services/usageService';
 import Toast from 'react-native-toast-message';
+import BackButton from '@/components/ui/BackButton';
 
 export default function CreateBlockRuleScreen() {
   const router = useRouter();
@@ -54,9 +55,7 @@ export default function CreateBlockRuleScreen() {
     <SafeAreaView className="flex-1 bg-bg-primary">
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5">
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-6">
-          <Text className="text-text-muted text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
 
         <Text className="text-2xl mb-4 text-center">🔒</Text>
         <Text className="text-text-primary text-2xl font-bold mb-1 text-center">Block an App</Text>

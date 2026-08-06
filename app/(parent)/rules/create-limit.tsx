@@ -11,6 +11,7 @@ import { createRule } from '@/services/ruleService';
 import { getInstalledApps } from '@/services/usageService';
 import { formatMinutes } from '@/utils/formatTime';
 import Toast from 'react-native-toast-message';
+import BackButton from '@/components/ui/BackButton';
 
 export default function CreateTimeLimitScreen() {
   const router = useRouter();
@@ -57,9 +58,7 @@ export default function CreateTimeLimitScreen() {
     <SafeAreaView className="flex-1 bg-bg-primary">
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5" onScrollBeginDrag={loadApps}>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 mb-6">
-          <Text className="text-text-muted text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
 
         <Text className="text-text-primary text-2xl font-bold mb-1">Set Time Limit</Text>
         <Text className="text-text-muted text-sm mb-8">Choose an app and set a daily usage limit.</Text>
