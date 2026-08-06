@@ -141,8 +141,15 @@ export default function DashboardScreen() {
       >
         {/* Greeting Area */}
         <View className="px-5 pt-4 pb-2">
-          <Text className="text-text-muted text-sm">Good{getGreeting()},</Text>
-          <Text className="text-text-primary text-2xl font-bold">{family?.name ?? 'Your Family'}</Text>
+          <View className="flex-row items-center">
+            <Text className="text-lg mr-2">{getGreetingIcon()}</Text>
+            <Text className="text-text-muted text-sm">Good{getGreeting()},</Text>
+          </View>
+          <Text className="text-text-primary text-2xl font-bold">
+            {family?.name 
+              ? (family.name.toLowerCase().endsWith('family') ? family.name : `${family.name} Family`) 
+              : 'Your Family'}
+          </Text>
         </View>
 
         {/* Child Selector */}
@@ -280,4 +287,11 @@ function getGreeting() {
   if (h < 12) return ' morning';
   if (h < 17) return ' afternoon';
   return ' evening';
+}
+
+function getGreetingIcon() {
+  const h = new Date().getHours();
+  if (h < 12) return '☀️';
+  if (h < 17) return '⛅';
+  return '🌙';
 }
