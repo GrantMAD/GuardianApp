@@ -65,13 +65,16 @@ export default function AppDetailScreen() {
 
   const handleToggleBlock = async () => {
     if (!selectedChildId) return;
+
     if (isBlocked) {
       const blockRule = rules.find((r) => r.rule_type === 'BLOCK');
-      if (blockRule) await deleteRule(blockRule.id);
+      if (!blockRule) return;
+      await deleteRule(blockRule.id);
+      setRules((prev) => prev.filter((r) => r.id !== blockRule.id));
     } else {
-      await createRule(selectedChildId, 'BLOCK', appId);
+      const newRule = await createRule(selectedChildId, 'BLOCK', appId);
+      setRules((prev) => [...prev, newRule]);
     }
-    loadData();
   };
 
   if (loading) {
@@ -87,7 +90,9 @@ export default function AppDetailScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
       <ScrollView className="flex-1 px-5">
         {/* Back */}
-        <BackButton onPress={() => router.push('/(parent)/apps')} />
+        <View className="mb-4">
+          <BackButton onPress={() => router.push('/(parent)/apps')} />
+        </View>
 
         {/* App header */}
         <View className="flex-row items-center bg-bg-card rounded-2xl p-4 border border-border mb-4">
@@ -125,7 +130,11 @@ export default function AppDetailScreen() {
         )}
 
         {/* Weekly chart */}
-        <SectionHeader title="Last 7 Days" icon="📆" />
+        <SectionHeader
+          title="Last 7 Days"
+          icon="📆"
+          description="Review the child\u2019s usage trend over the last week."
+        />
         <View className="bg-bg-card rounded-2xl p-4 border border-border mb-4">
           <UsageBarChart data={weekData} />
         </View>
@@ -134,6 +143,7 @@ export default function AppDetailScreen() {
         <SectionHeader
           title="Rules"
           icon="🛡️"
+          description="Manage blocking and time limit rules for this app."
           actionLabel="Add Limit"
           onAction={() => router.push('/(parent)/rules/create-limit')}
         />
