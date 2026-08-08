@@ -10,12 +10,13 @@ export interface Rule {
   daily_limit_minutes: number | null;
   weekly_limit_minutes: number | null;
   is_active: boolean;
+  installed_apps: { app_name: string; icon_url: string | null; package_name: string } | null;
 }
 
 export async function getRules(childId: string) {
   const { data, error } = await supabase
     .from('rules')
-    .select('*')
+    .select('*, installed_apps(app_name, icon_url, package_name)')
     .eq('child_id', childId)
     .eq('is_active', true);
 

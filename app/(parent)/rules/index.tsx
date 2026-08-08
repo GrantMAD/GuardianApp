@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useFamilyStore } from '@/store/familyStore';
 import { getRules, deleteRule } from '@/services/ruleService';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { formatMinutes } from '@/utils/formatTime';
+import { KNOWN_ICONS } from '@/constants/appIcons';
 
 export default function RulesScreen() {
   const router = useRouter();
@@ -16,6 +17,27 @@ export default function RulesScreen() {
   const [loading, setLoading] = useState(true);
 
   const selectedChild = children.find((c) => c.id === selectedChildId);
+
+  /** Resolves the best available icon URI for a rule row */
+  function resolveIcon(r: any): string | null {
+    if (!r.installed_apps) return null;
+    return r.installed_apps.icon_url || KNOWN_ICONS[r.installed_apps.package_name] || null;
+  }
+
+  /** Small square icon with initial-letter fallback */
+  function AppIcon({ rule }: { rule: any }) {
+    const uri = resolveIcon(rule);
+    const label = (r: any) => (r.installed_apps?.app_name ?? r.category ?? 'A').charAt(0).toUpperCase();
+    return (
+      <View className="w-10 h-10 rounded-xl bg-bg-elevated items-center justify-center mr-3">
+        {uri ? (
+          <Image source={{ uri }} className="w-9 h-9 rounded-lg" resizeMode="contain" />
+        ) : (
+          <Text className="text-text-primary font-bold text-base">{label(rule)}</Text>
+        )}
+      </View>
+    );
+  }
 
   const load = async () => {
     if (!selectedChildId) return;
@@ -84,11 +106,14 @@ export default function RulesScreen() {
               <Text className="text-text-muted text-sm text-center py-4">No time limits set</Text>
             ) : timeLimits.map((r) => (
               <View key={r.id} className="bg-bg-card rounded-2xl p-4 border border-border mb-3 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-text-primary font-semibold">
-                    {r.app_id ? 'Specific App' : r.category ?? 'All Apps'}
-                  </Text>
-                  <Text className="text-warning text-sm">{formatMinutes(r.daily_limit_minutes)} / day</Text>
+                <View className="flex-row items-center flex-1">
+                  <AppIcon rule={r} />
+                  <View>
+                    <Text className="text-text-primary font-semibold">
+                      {r.installed_apps?.app_name ?? r.category ?? 'All Apps'}
+                    </Text>
+                    <Text className="text-warning text-sm">{formatMinutes(r.daily_limit_minutes)} / day</Text>
+                  </View>
                 </View>
                 <TouchableOpacity onPress={() => deleteRule(r.id).then(load)}>
                   <Text className="text-danger text-sm font-medium">Remove</Text>
@@ -106,9 +131,14 @@ export default function RulesScreen() {
               <Text className="text-text-muted text-sm text-center py-4">No apps blocked</Text>
             ) : blockRules.map((r) => (
               <View key={r.id} className="bg-bg-card rounded-2xl p-4 border border-danger/30 mb-3 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-text-primary font-semibold">{r.app_id ? 'App' : r.category ?? 'All Apps'}</Text>
-                  <Text className="text-danger text-sm">Blocked</Text>
+                <View className="flex-row items-center flex-1">
+                  <AppIcon rule={r} />
+                  <View>
+                    <Text className="text-text-primary font-semibold">
+                      {r.installed_apps?.app_name ?? r.category ?? 'All Apps'}
+                    </Text>
+                    <Text className="text-danger text-sm">Blocked</Text>
+                  </View>
                 </View>
                 <TouchableOpacity onPress={() => deleteRule(r.id).then(load)}>
                   <Text className="text-danger text-sm font-medium">Remove</Text>
