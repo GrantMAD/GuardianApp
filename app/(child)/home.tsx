@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StatusBar, RefreshControl, Modal, TextInput,
-  ActivityIndicator, Platform,
+  ActivityIndicator, Platform, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAgentStore } from '@/store/agentStore';
@@ -78,6 +78,8 @@ export default function ChildHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const [requestMsg, setRequestMsg] = useState('');
+  const [requestAppId, setRequestAppId] = useState<string | null>(null);
+  const [requestMinutes, setRequestMinutes] = useState(15);
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [extraMinutes, setExtraMinutes] = useState(0);
@@ -241,11 +243,15 @@ export default function ChildHomeScreen() {
       await supabase.from('permission_requests').insert({
         child_id: selectedChildId,
         request_type: 'extra_time',
+        app_id: requestAppId,
+        extra_minutes: requestMinutes,
         message: requestMsg.trim() || null,
         status: 'pending',
       });
       setShowRequest(false);
       setRequestMsg('');
+      setRequestAppId(null);
+      setRequestMinutes(15);
       setRequestSent(true);
       setTimeout(() => setRequestSent(false), 3000);
     } finally {
@@ -253,11 +259,24 @@ export default function ChildHomeScreen() {
     }
   };
 
-  // Apps with a time limit rule
-  const limitedApps = usageData.filter((u: any) => {
-    const rule = activeRules.find((r) => r.app_id === u.app_id && r.rule_type === 'TIME_LIMIT');
-    return !!rule;
-  });
+  // Apps that have any active restriction (TIME_LIMIT or BLOCK)
+  const restrictedApps = installedApps.filter((app: any) =>
+    activeRules.some((r) => r.app_id === app.id)
+  );
+
+  // Apps with a time limit rule — derived from rules so 0-usage apps still appear
+  const limitedApps = activeRules
+    .filter((r) => r.rule_type === 'TIME_LIMIT' && r.app_id)
+    .map((r) => {
+      const appInfo = installedApps.find((a: any) => a.id === r.app_id);
+      const usage = usageData.find((u: any) => u.app_id === r.app_id);
+      return {
+        app_id: r.app_id,
+        app_name: appInfo?.app_name ?? 'App',
+        usage_minutes: usage?.usage_minutes ?? 0,
+        daily_limit_minutes: r.daily_limit_minutes,
+      };
+    });
 
   // Apps that are outright blocked
   const blockedApps = activeRules
@@ -267,135 +286,486 @@ export default function ChildHomeScreen() {
   // Apps blocked by an active schedule
   const scheduledBlock = activeSchedules.some((s) => isScheduleActive(s));
 
-  const greeting = `Hi ${child?.name ?? 'there'} 👋`;
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return `Good morning`;
+    if (h < 18) return `Good afternoon`;
+    return `Good evening`;
+  };
+  const childName = child?.name ?? 'there';
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  // Build blocked app rows with icon info
+  const blockedAppRows = activeRules
+    .filter((r) => r.rule_type === 'BLOCK' && r.app_id)
+    .map((r) => {
+      const appInfo = installedApps.find((a: any) => a.id === r.app_id);
+      return { ruleId: r.id, app_name: appInfo?.app_name ?? 'App', icon_url: appInfo?.icon_url ?? null };
+    });
 
   return (
-    <SafeAreaView className="flex-1 bg-bg-primary">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0F0F14' }}>
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
 
       <ScrollView
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#7C6AF5" />}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View className="px-5 pt-4 pb-2">
-          <Text className="text-text-primary text-2xl font-bold">{greeting}</Text>
-          <Text className="text-text-muted text-sm mt-0.5">Here's your screen time today</Text>
+        {/* ── Hero Header ──────────────────────────────── */}
+        <View
+          style={{
+            backgroundColor: 'transparent',
+          }}
+          className="px-5 pt-6 pb-5"
+        >
+          <View
+            style={{
+              borderRadius: 24,
+              padding: 20,
+              backgroundColor: '#1A1730',
+              borderWidth: 1,
+              borderColor: 'rgba(124,106,245,0.25)',
+            }}
+          >
+            {/* Avatar + greeting row */}
+            <View className="flex-row items-center mb-3">
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(124,106,245,0.2)',
+                  borderWidth: 2,
+                  borderColor: 'rgba(124,106,245,0.5)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Text style={{ fontSize: 22 }}>👤</Text>
+              </View>
+              <View className="flex-1">
+                <Text style={{ color: '#9B8FF7', fontSize: 12, fontWeight: '600', letterSpacing: 0.5 }}>
+                  {greeting().toUpperCase()}
+                </Text>
+                <Text className="text-text-primary text-xl font-bold">{childName} 👋</Text>
+              </View>
+            </View>
+            <Text style={{ color: 'rgba(144,144,168,0.8)', fontSize: 12 }}>{dateStr}</Text>
+
+            {/* Schedule banner inline */}
+            {scheduledBlock && (
+              <View
+                style={{
+                  marginTop: 12,
+                  backgroundColor: 'rgba(239,68,68,0.1)',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: 'rgba(239,68,68,0.3)',
+                  padding: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🕐</Text>
+                <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '600' }}>
+                  Apps blocked by schedule right now
+                </Text>
+              </View>
+            )}
+
+            {/* Request sent banner */}
+            {requestSent && (
+              <View
+                style={{
+                  marginTop: 12,
+                  backgroundColor: 'rgba(34,197,94,0.1)',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: 'rgba(34,197,94,0.3)',
+                  padding: 10,
+                }}
+              >
+                <Text style={{ color: '#22C55E', fontSize: 13, fontWeight: '600' }}>
+                  ✅ Request sent to your parent!
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Schedule banner */}
-        {scheduledBlock && (
-          <View className="mx-5 mt-3 bg-danger/10 border border-danger/40 rounded-2xl p-4 flex-row items-center">
-            <Text className="text-xl mr-3">🕐</Text>
-            <View>
-              <Text className="text-danger font-semibold text-sm">Restriction active</Text>
-              <Text className="text-text-muted text-xs">Apps are blocked by a schedule right now.</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Request sent banner */}
-        {requestSent && (
-          <View className="mx-5 mt-3 bg-success/10 border border-success/40 rounded-2xl p-4">
-            <Text className="text-success font-semibold text-sm">✅ Request sent to your parent!</Text>
-          </View>
-        )}
-
-        {/* Time rings grid */}
+        {/* ── Time Limits ──────────────────────────────── */}
         {limitedApps.length > 0 ? (
-          <View className="px-5 mt-4">
-            <Text className="text-text-muted text-xs font-medium mb-3">REMAINING TIME</Text>
-            <View className="flex-row flex-wrap gap-4">
-              {limitedApps.map((u: any) => {
-                const rule = activeRules.find((r) => r.app_id === u.app_id && r.rule_type === 'TIME_LIMIT');
-                return (
-                  <View key={u.app_id} className="w-24 items-center">
-                    <TimeRing
-                      usedMinutes={u.usage_minutes ?? 0}
-                      limitMinutes={(rule?.daily_limit_minutes ?? 60) + extraMinutes}
-                      size={88}
-                      label={u.installed_apps?.app_name ?? 'App'}
-                    />
+          <View className="px-5 mb-2">
+            <Text
+              style={{ color: '#9090A8', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}
+            >
+              SCREEN TIME LIMITS
+            </Text>
+            {limitedApps.map((item: any) => {
+              const limit = (item.daily_limit_minutes ?? 60) + extraMinutes;
+              const used = item.usage_minutes;
+              const remaining = Math.max(limit - used, 0);
+              const fraction = limit > 0 ? Math.min(used / limit, 1) : 0;
+              const pct = Math.round(fraction * 100);
+              const barColor = fraction >= 1 ? '#EF4444' : fraction >= 0.75 ? '#F59E0B' : '#7C6AF5';
+
+              // Find the full app info for the icon
+              const appInfo = installedApps.find((a: any) => a.id === item.app_id);
+
+              return (
+                <View
+                  key={item.app_id}
+                  style={{
+                    backgroundColor: '#1A1730',
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.07)',
+                    padding: 16,
+                    marginBottom: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* App icon */}
+                  <View
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 14,
+                      backgroundColor: 'rgba(124,106,245,0.15)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {appInfo?.icon_url ? (
+                      <Image
+                        source={{ uri: appInfo.icon_url }}
+                        style={{ width: 52, height: 52, borderRadius: 14 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={{ fontSize: 26 }}>📱</Text>
+                    )}
                   </View>
-                );
-              })}
-            </View>
+
+                  {/* Info */}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ color: '#E8E8F0', fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
+                        {item.app_name}
+                      </Text>
+                      <Text style={{ color: '#9090A8', fontSize: 12 }}>
+                        {formatMinutes(remaining)} left
+                      </Text>
+                    </View>
+
+                    {/* Progress bar */}
+                    <View
+                      style={{
+                        height: 6,
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                        marginBottom: 4,
+                      }}
+                    >
+                      <View
+                        style={{
+                          height: 6,
+                          width: `${pct}%`,
+                          backgroundColor: barColor,
+                          borderRadius: 3,
+                        }}
+                      />
+                    </View>
+
+                    <Text style={{ color: '#9090A8', fontSize: 11 }}>
+                      {formatMinutes(used)} used · {formatMinutes(limit)} limit
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         ) : (
-          <View className="mx-5 mt-4 bg-bg-card rounded-2xl p-5 border border-border items-center">
-            <Text className="text-2xl mb-2">✅</Text>
-            <Text className="text-text-primary font-semibold text-sm">No time limits set</Text>
-            <Text className="text-text-muted text-xs text-center mt-1">
+          <View
+            style={{
+              marginHorizontal: 20,
+              marginBottom: 12,
+              backgroundColor: '#1A1730',
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.07)',
+              padding: 24,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>✅</Text>
+            <Text style={{ color: '#E8E8F0', fontWeight: '700', fontSize: 15 }}>No time limits</Text>
+            <Text style={{ color: '#9090A8', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
               Your parent hasn't set any app time limits yet.
             </Text>
           </View>
         )}
 
-        {/* Blocked apps */}
-        {blockedApps.length > 0 && (
-          <View className="px-5 mt-6">
-            <Text className="text-text-muted text-xs font-medium mb-3">BLOCKED APPS</Text>
-            {activeRules.filter((r) => r.rule_type === 'BLOCK').map((r) => (
-              <View key={r.id} className="flex-row items-center bg-bg-card rounded-xl p-3 border border-danger/30 mb-2">
-                <Text className="text-danger mr-3">🔒</Text>
-                <Text className="text-text-primary text-sm flex-1">
-                  {r.app_id ? 'Specific App' : 'All Apps'} — blocked by parent
-                </Text>
+        {/* ── Blocked Apps ─────────────────────────────── */}
+        {blockedAppRows.length > 0 && (
+          <View className="px-5 mb-2">
+            <Text
+              style={{ color: '#9090A8', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}
+            >
+              BLOCKED APPS
+            </Text>
+            {blockedAppRows.map((row) => (
+              <View
+                key={row.ruleId}
+                style={{
+                  backgroundColor: '#1A1730',
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(239,68,68,0.2)',
+                  padding: 14,
+                  marginBottom: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                {/* Icon */}
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(239,68,68,0.12)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {row.icon_url ? (
+                    <Image
+                      source={{ uri: row.icon_url }}
+                      style={{ width: 44, height: 44, borderRadius: 12 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 22 }}>🔒</Text>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#E8E8F0', fontWeight: '600', fontSize: 14 }}>{row.app_name}</Text>
+                  <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 2 }}>Blocked by parent</Text>
+                </View>
               </View>
             ))}
           </View>
         )}
 
-        <View className="h-24" />
+        <View className="h-28" />
       </ScrollView>
 
-      {/* Floating Ask Parent button */}
+      {/* ── Floating Ask Parent button ──────────────── */}
       <View className="absolute bottom-8 left-0 right-0 items-center">
         <TouchableOpacity
           id="btn-ask-parent"
           onPress={() => setShowRequest(true)}
-          className="bg-accent px-8 py-4 rounded-full shadow-lg flex-row items-center"
           activeOpacity={0.85}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#7C6AF5',
+            paddingHorizontal: 28,
+            paddingVertical: 16,
+            borderRadius: 100,
+            shadowColor: '#7C6AF5',
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.5,
+            shadowRadius: 20,
+            elevation: 10,
+          }}
         >
-          <Text className="text-white mr-2 text-lg">💬</Text>
-          <Text className="text-white font-bold text-base">Ask Parent</Text>
+          <Text style={{ fontSize: 18, marginRight: 8 }}>💬</Text>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Ask Parent</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Request modal */}
+      {/* ── Request modal ────────────────────────────── */}
       <Modal visible={showRequest} transparent animationType="slide">
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-bg-elevated rounded-t-3xl p-6">
-            <Text className="text-text-primary text-lg font-bold mb-1">Ask for more time</Text>
-            <Text className="text-text-muted text-sm mb-4">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View
+            style={{
+              backgroundColor: '#1A1730',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              padding: 24,
+              borderTopWidth: 1,
+              borderColor: 'rgba(124,106,245,0.3)',
+            }}
+          >
+            {/* Handle */}
+            <View style={{ width: 40, height: 4, backgroundColor: '#3A3A5C', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+
+            <Text style={{ color: '#E8E8F0', fontSize: 18, fontWeight: '700', marginBottom: 4 }}>
+              Ask for more time
+            </Text>
+            <Text style={{ color: '#9090A8', fontSize: 13, marginBottom: 20 }}>
               Your parent will get a notification with your request.
             </Text>
+
+            {/* App picker */}
+            {restrictedApps.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#9090A8', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 8 }}>
+                  WHICH APP?
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <TouchableOpacity
+                    id="chip-app-any"
+                    onPress={() => setRequestAppId(null)}
+                    style={{
+                      marginRight: 8,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 100,
+                      borderWidth: 1.5,
+                      borderColor: requestAppId === null ? '#7C6AF5' : 'rgba(255,255,255,0.1)',
+                      backgroundColor: requestAppId === null ? 'rgba(124,106,245,0.2)' : 'transparent',
+                    }}
+                  >
+                    <Text style={{ color: requestAppId === null ? '#9B8FF7' : '#9090A8', fontWeight: '600', fontSize: 13 }}>
+                      Any App
+                    </Text>
+                  </TouchableOpacity>
+                  {restrictedApps.map((app: any) => (
+                    <TouchableOpacity
+                      key={app.id}
+                      onPress={() => setRequestAppId(app.id)}
+                      style={{
+                        marginRight: 8,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 100,
+                        borderWidth: 1.5,
+                        borderColor: requestAppId === app.id ? '#7C6AF5' : 'rgba(255,255,255,0.1)',
+                        backgroundColor: requestAppId === app.id ? 'rgba(124,106,245,0.2)' : 'transparent',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {app.icon_url ? (
+                        <Image
+                          source={{ uri: app.icon_url }}
+                          style={{ width: 18, height: 18, borderRadius: 4, marginRight: 6 }}
+                        />
+                      ) : (
+                        <Text style={{ marginRight: 6, fontSize: 14 }}>📱</Text>
+                      )}
+                      <Text style={{ color: requestAppId === app.id ? '#9B8FF7' : '#9090A8', fontWeight: '600', fontSize: 13 }}>
+                        {app.app_name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Time selector */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: '#9090A8', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 8 }}>
+                HOW MUCH TIME?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[15, 30, 60].map((mins) => (
+                  <TouchableOpacity
+                    key={mins}
+                    id={`chip-time-${mins}`}
+                    onPress={() => setRequestMinutes(mins)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 12,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderColor: requestMinutes === mins ? '#7C6AF5' : 'rgba(255,255,255,0.1)',
+                      backgroundColor: requestMinutes === mins ? 'rgba(124,106,245,0.2)' : 'transparent',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ color: requestMinutes === mins ? '#9B8FF7' : '#9090A8', fontWeight: '700', fontSize: 15 }}>
+                      {mins}
+                    </Text>
+                    <Text style={{ color: requestMinutes === mins ? '#9B8FF7' : '#9090A8', fontSize: 11, marginTop: 1 }}>
+                      min
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Message input */}
             <TextInput
               id="input-request-message"
               value={requestMsg}
               onChangeText={setRequestMsg}
               placeholder="Add a message (optional)…"
-              placeholderTextColor="#9090A8"
+              placeholderTextColor="#5A5A78"
               multiline
               numberOfLines={3}
-              className="bg-bg-card border border-border rounded-2xl px-4 py-3 text-text-primary text-base mb-4"
-              style={{ minHeight: 80, textAlignVertical: 'top' }}
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 16,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                color: '#E8E8F0',
+                fontSize: 14,
+                minHeight: 70,
+                textAlignVertical: 'top',
+                marginBottom: 16,
+              }}
             />
-            <View className="flex-row gap-x-3">
+
+            {/* Buttons */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
-                onPress={() => setShowRequest(false)}
-                className="flex-1 border border-border py-4 rounded-2xl items-center"
+                onPress={() => { setShowRequest(false); setRequestAppId(null); setRequestMinutes(15); }}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  paddingVertical: 16,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                }}
               >
-                <Text className="text-text-muted font-semibold">Cancel</Text>
+                <Text style={{ color: '#9090A8', fontWeight: '600', fontSize: 15 }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 id="btn-send-request"
                 onPress={handleSendRequest}
                 disabled={sendingRequest}
-                className="flex-1 bg-accent py-4 rounded-2xl items-center"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#7C6AF5',
+                  paddingVertical: 16,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  shadowColor: '#7C6AF5',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 12,
+                  elevation: 6,
+                }}
               >
-                {sendingRequest ? <ActivityIndicator color="#fff" /> : (
-                  <Text className="text-white font-bold">Send Request</Text>
+                {sendingRequest ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Send Request</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -405,3 +775,4 @@ export default function ChildHomeScreen() {
     </SafeAreaView>
   );
 }
+

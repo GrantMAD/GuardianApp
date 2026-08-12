@@ -5,12 +5,12 @@
 /* ── Theme colour tokens ─────────────────────────────────────── */
 /* Light mode (default — no .dark class)                         */
 :root {
-  --color-bg-primary:   #EBEDF4;
-  --color-bg-card:      #FCFCFD;
-  --color-bg-elevated:  #E2E6F0;
+  --color-bg-primary:   #D5D8E6;
+  --color-bg-card:      #E4E7F2;
+  --color-bg-elevated:  #CDD0E0;
   --color-text-primary: #1A1A24;
   --color-text-muted:   #64748B;
-  --color-border:       #CBD1E1;
+  --color-border:       #B8BDD4;
 }
 
 /* Dark mode (.dark class on <html>)                             */
