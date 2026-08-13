@@ -295,6 +295,9 @@ export default function ChildHomeScreen() {
   const childName = child?.name ?? 'there';
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
+  // Calculate total screen time today
+  const totalUsageMinutes = usageData.reduce((acc, curr) => acc + (curr.usage_minutes || 0), 0);
+
   // Build blocked app rows with icon info
   const blockedAppRows = activeRules
     .filter((r) => r.rule_type === 'BLOCK' && r.app_id)
@@ -353,6 +356,42 @@ export default function ChildHomeScreen() {
               </View>
             </View>
             <Text style={{ color: 'rgba(144,144,168,0.8)', fontSize: 12 }}>{dateStr}</Text>
+
+            {/* Total usage banner */}
+            <View
+              style={{
+                marginTop: 16,
+                backgroundColor: 'rgba(124,106,245,0.1)',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(124,106,245,0.2)',
+                padding: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(124,106,245,0.2)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Text style={{ fontSize: 18 }}>⏱️</Text>
+              </View>
+              <View>
+                <Text style={{ color: '#9B8FF7', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 }}>
+                  TOTAL SCREEN TIME
+                </Text>
+                <Text style={{ color: '#E8E8F0', fontSize: 16, fontWeight: '700' }}>
+                  {formatMinutes(totalUsageMinutes)} today
+                </Text>
+              </View>
+            </View>
 
             {/* Schedule banner inline */}
             {scheduledBlock && (
