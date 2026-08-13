@@ -59,6 +59,7 @@ export default function DashboardScreen() {
   const [totalMins, setTotalMins]     = useState<number | null>(null);
   const [loading, setLoading]         = useState(true);
   const [pendingRequests, setPendingRequests] = useState<PermissionRequest[]>([]);
+  const [familySummaries, setFamilySummaries] = useState<Record<string, number>>({});
 
   const today = new Date().toISOString().slice(0, 10);
   const selectedChild = children.find((c) => c.id === selectedChildId);
@@ -94,6 +95,14 @@ export default function DashboardScreen() {
         registerForPushNotificationsAsync(fam.id);
         const reqs = await getPendingRequests(fam.id);
         setPendingRequests(reqs);
+
+        // Fetch daily summaries for all children
+        const results = await Promise.all(
+          kids.map(c => getDailyScreenTimeSummary(c.id, today).then(res => ({ id: c.id, mins: res?.total_minutes ?? 0 })))
+        );
+        const sums: Record<string, number> = {};
+        results.forEach(r => sums[r.id] = r.mins);
+        setFamilySummaries(sums);
       }
       if (selectedChildId) {
         const [usage, summary, apps] = await Promise.all([
@@ -242,6 +251,39 @@ export default function DashboardScreen() {
             >
               <Text className="text-white font-semibold">Add Child</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {children.length > 1 && (
+          <View className="px-5 mt-2 mb-2">
+            <SectionHeader title="Family Overview" icon="👨‍👩‍👧‍👦" description="Screen time for all children today." />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2 py-1">
+              {children.map((child) => {
+                const childRequests = pendingRequests.filter(r => r.child_id === child.id).length;
+                const mins = familySummaries[child.id] ?? 0;
+                const isSelected = selectedChildId === child.id;
+                
+                return (
+                  <TouchableOpacity
+                    key={child.id}
+                    onPress={() => setSelectedChildId(child.id)}
+                    className={`mr-4 p-4 rounded-2xl border ${isSelected ? 'border-accent bg-accent/10' : 'border-border bg-bg-card'} w-36`}
+                  >
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text className="font-semibold text-text-primary text-sm" numberOfLines={1}>{child.name}</Text>
+                      {childRequests > 0 && (
+                        <View className="bg-amber-500 rounded-full h-5 w-5 items-center justify-center">
+                          <Text className="text-white text-[10px] font-bold">{childRequests}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text className={`text-2xl font-bold ${isSelected ? 'text-accent' : 'text-text-primary'}`}>
+                      {formatMinutes(mins)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 

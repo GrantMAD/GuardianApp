@@ -260,6 +260,24 @@ export default function ChildHomeScreen() {
     }
   };
 
+  const handleSendUnblockRequest = async (appId: string) => {
+    if (!selectedChildId) return;
+    try {
+      await supabase.from('permission_requests').insert({
+        child_id: selectedChildId,
+        request_type: 'unblock',
+        app_id: appId,
+        extra_minutes: null,
+        message: 'Please unblock this app.',
+        status: 'pending',
+      });
+      setRequestSent(true);
+      setTimeout(() => setRequestSent(false), 3000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Apps that have any active restriction (TIME_LIMIT or BLOCK)
   const restrictedApps = installedApps.filter((app: any) =>
     activeRules.some((r) => r.app_id === app.id || (r.category === app.category && !r.app_id))
@@ -328,12 +346,13 @@ export default function ChildHomeScreen() {
     .flatMap((r) => {
       if (r.app_id) {
         const appInfo = installedApps.find((a: any) => a.id === r.app_id);
-        return [{ ruleId: r.id, app_name: appInfo?.app_name ?? 'App', icon_url: appInfo?.icon_url ?? null }];
+        return [{ ruleId: r.id, app_id: r.app_id, app_name: appInfo?.app_name ?? 'App', icon_url: appInfo?.icon_url ?? null }];
       } else if (r.category) {
         return installedApps
           .filter((a: any) => a.category === r.category)
           .map((appInfo: any) => ({
             ruleId: `${r.id}-${appInfo.id}`,
+            app_id: appInfo.id,
             app_name: appInfo.app_name,
             icon_url: appInfo.icon_url ?? null
           }));
@@ -635,6 +654,19 @@ export default function ChildHomeScreen() {
                   <Text style={{ color: '#E8E8F0', fontWeight: '600', fontSize: 14 }}>{row.app_name}</Text>
                   <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 2 }}>Blocked by parent</Text>
                 </View>
+                <TouchableOpacity
+                  onPress={() => handleSendUnblockRequest(row.app_id)}
+                  style={{
+                    backgroundColor: 'rgba(124,106,245,0.15)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: 'rgba(124,106,245,0.3)',
+                  }}
+                >
+                  <Text style={{ color: '#9B8FF7', fontWeight: '600', fontSize: 12 }}>Unlock</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>

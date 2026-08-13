@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StatusBar,
-  Platform, Linking, Alert,
+  Platform, Linking, Alert, AppState, AppStateStatus
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -36,13 +36,21 @@ export default function SetupScreen() {
 
   const openUsageSettings = () => {
     if (Platform.OS === 'android') {
-      Linking.openSettings();
+      if (AppBlockerModule.openUsageSettings) {
+        AppBlockerModule.openUsageSettings();
+      } else {
+        Linking.openSettings();
+      }
     }
   };
 
   const openAccessibilitySettings = () => {
     if (Platform.OS === 'android') {
-      Linking.openSettings();
+      if (AppBlockerModule.openAccessibilitySettings) {
+        AppBlockerModule.openAccessibilitySettings();
+      } else {
+        Linking.openSettings();
+      }
     }
   };
 
@@ -54,14 +62,44 @@ export default function SetupScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Enable',
-          onPress: () => {
-            // AppBlockerModule.requestDeviceAdmin?.();
-            setGranted((g) => ({ ...g, admin: true }));
+          onPress: async () => {
+            if (AppBlockerModule.requestDeviceAdmin) {
+              AppBlockerModule.requestDeviceAdmin();
+            }
+            // Poll for device admin a few seconds later, or rely on AppState
+            setTimeout(checkPermissions, 3000);
           },
         },
       ]
     );
   };
+
+  const checkPermissions = async () => {
+    try {
+      const hasUsage = await AppBlockerModule.hasUsageStatsPermission?.() ?? false;
+      const hasAccess = await AppBlockerModule.isAccessibilityEnabled?.() ?? false;
+      const hasAdmin = await AppBlockerModule.isDeviceAdminEnabled?.() ?? false;
+      setGranted({ usage: hasUsage, accessibility: hasAccess, admin: hasAdmin });
+    } catch (e) {
+      console.warn('Failed to check permissions', e);
+    }
+  };
+
+  useEffect(() => {
+    // Initial check
+    checkPermissions();
+
+    // Check when returning to app from settings
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        checkPermissions();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const steps: Step[] = [
     {
@@ -101,8 +139,14 @@ export default function SetupScreen() {
 
   const current = steps[step];
   const isLast = step === steps.length - 1;
+  const isCurrentGranted = granted[current.id as keyof typeof granted];
 
   const handleNext = () => {
+    if (!isCurrentGranted) {
+      Alert.alert('Permission Required', 'Please complete this step before continuing.');
+      return;
+    }
+    
     if (isLast) {
       markComplete();
     } else {
@@ -140,9 +184,17 @@ export default function SetupScreen() {
         <Text className="text-text-primary text-2xl font-bold text-center mb-4">
           {current.title}
         </Text>
-        <Text className="text-text-muted text-base text-center leading-6">
+        <Text className="text-text-muted text-base text-center leading-6 mb-6">
           {current.description}
         </Text>
+
+        {/* Status Indicator */}
+        <View className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isCurrentGranted ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+          <Text className="text-lg">{isCurrentGranted ? '✅' : '❌'}</Text>
+          <Text className={`font-bold ${isCurrentGranted ? 'text-emerald-400' : 'text-red-400'}`}>
+            {isCurrentGranted ? 'Permission Granted' : 'Permission Missing'}
+          </Text>
+        </View>
       </View>
 
       <View className="px-8 pb-8 gap-y-3">
@@ -160,10 +212,11 @@ export default function SetupScreen() {
         <TouchableOpacity
           id="btn-setup-next"
           onPress={handleNext}
-          className="bg-accent py-4 rounded-2xl items-center"
+          className={`py-4 rounded-2xl items-center ${isCurrentGranted ? 'bg-accent' : 'bg-bg-elevated opacity-50'}`}
           activeOpacity={0.85}
+          disabled={!isCurrentGranted}
         >
-          <Text className="text-white font-bold text-base">
+          <Text className={`font-bold text-base ${isCurrentGranted ? 'text-white' : 'text-text-muted'}`}>
             {isLast ? 'Finish Setup' : 'Done — Next Step'}
           </Text>
         </TouchableOpacity>
