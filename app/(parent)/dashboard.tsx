@@ -9,6 +9,7 @@ import { useFamilyStore } from '@/store/familyStore';
 import { useAuthStore } from '@/store/authStore';
 import { getFamily, getChildren, createFamily } from '@/services/childService';
 import { getDailyUsage, getDailyScreenTimeSummary, getInstalledApps } from '@/services/usageService';
+import { createSchedule } from '@/services/scheduleService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { StatCard } from '@/components/ui/StatCard';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
@@ -44,6 +45,8 @@ async function registerForPushNotificationsAsync(familyId: string) {
 
   await supabase.from('families').update({ push_token: token }).eq('id', familyId);
 }
+
+import { Alert } from 'react-native';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -124,6 +127,45 @@ export default function DashboardScreen() {
     const success = await updateRequestStatus(requestId, 'denied');
     if (success) {
       setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+    }
+  };
+
+  const handlePauseDevice = () => {
+    if (!selectedChildId) return;
+    Alert.alert(
+      'Pause Device',
+      'Select duration to block all apps for:',
+      [
+        { text: '15 Minutes', onPress: () => applyPause(15) },
+        { text: '30 Minutes', onPress: () => applyPause(30) },
+        { text: '1 Hour', onPress: () => applyPause(60) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const applyPause = async (minutes: number) => {
+    if (!selectedChildId) return;
+    try {
+      const now = new Date();
+      const end = new Date(now.getTime() + minutes * 60000);
+      
+      const startStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+      
+      await createSchedule({
+        child_id: selectedChildId,
+        name: 'Emergency Pause',
+        start_time: startStr,
+        end_time: endStr,
+        days_of_week: [now.getDay()],
+        scope: 'all',
+        block_type: 'block'
+      });
+      Alert.alert('Success', `Device paused for ${minutes} minutes.`);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Failed to pause device');
     }
   };
 
@@ -285,6 +327,14 @@ export default function DashboardScreen() {
               >
                 <Text className="text-2xl mb-1">📈</Text>
                 <Text className="text-text-primary text-xs font-semibold">Reports</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                id="btn-pause-device"
+                onPress={handlePauseDevice}
+                className="flex-1 bg-danger/10 border border-danger/40 rounded-2xl p-4 items-center"
+              >
+                <Text className="text-2xl mb-1">🛑</Text>
+                <Text className="text-danger text-xs font-semibold">Pause</Text>
               </TouchableOpacity>
             </View>
           </View>

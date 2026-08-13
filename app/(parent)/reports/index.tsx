@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
-import { getDailyUsage, getDailyScreenTimeSummary } from '@/services/usageService';
+import { getWeeklyUsage } from '@/services/reportService';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatCard } from '@/components/ui/StatCard';
@@ -17,6 +17,7 @@ export default function ReportsScreen() {
 
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [timeRange, setTimeRange] = useState<7 | 30>(7);
   const [weekData, setWeekData]   = useState<{ date: string; label: string; total: number; data: any[] }[]>([]);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
 
@@ -28,27 +29,39 @@ export default function ReportsScreen() {
 
   const load = async () => {
     if (!selectedChildId) return;
+    setLoading(true);
     try {
+      const d = new Date();
+      d.setDate(d.getDate() - (timeRange - 1));
+      const startDate = d.toISOString().slice(0, 10);
+      
+      const usageData = await getWeeklyUsage(selectedChildId, startDate, timeRange);
+      
       const days: { date: string; label: string; total: number; data: any[] }[] = [];
-      for (let i = 6; i >= 0; i--) {
+      for (let i = timeRange - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const date  = d.toISOString().slice(0, 10);
         const label = i === 0 ? 'Today' : d.toLocaleDateString('en', { weekday: 'short' });
-        const [usage, summary] = await Promise.all([
-          getDailyUsage(selectedChildId, date),
-          getDailyScreenTimeSummary(selectedChildId, date),
-        ]);
-        days.push({ date, label, total: summary?.total_minutes ?? 0, data: usage ?? [] });
+        
+        const dayData = usageData.find(u => u.date === date);
+        days.push({ 
+          date, 
+          label, 
+          total: dayData?.total_minutes ?? 0, 
+          data: dayData?.logs ?? [] 
+        });
       }
       setWeekData(days);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => { load(); }, [selectedChildId]);
+  useEffect(() => { load(); }, [selectedChildId, timeRange]);
 
   const totalWeekMins = weekData.reduce((sum, d) => sum + d.total, 0);
   const avgDailyMins  = weekData.length ? Math.round(totalWeekMins / weekData.length) : 0;
@@ -77,10 +90,28 @@ export default function ReportsScreen() {
         className="flex-1 px-5"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#7C6AF5" />}
       >
-        <Text className="text-text-primary text-2xl font-bold pt-4 pb-1">📈 Reports</Text>
-        {selectedChild && (
-          <Text className="text-text-muted text-sm mb-5">Review screen time and app usage for {selectedChild.name} over the last 7 days.</Text>
-        )}
+        <View className="flex-row items-end justify-between">
+          <View className="flex-1 mr-4">
+            <Text className="text-text-primary text-2xl font-bold pt-4 pb-1">📈 Reports</Text>
+            {selectedChild && (
+              <Text className="text-text-muted text-sm mb-5">Review screen time and app usage for {selectedChild.name} over the last {timeRange} days.</Text>
+            )}
+          </View>
+          <View className="flex-row bg-bg-elevated rounded-xl p-1 mb-5">
+            <TouchableOpacity 
+              onPress={() => setTimeRange(7)}
+              className={`px-3 py-1.5 rounded-lg ${timeRange === 7 ? 'bg-bg-card shadow-sm border border-border/50' : ''}`}
+            >
+              <Text className={`text-xs font-semibold ${timeRange === 7 ? 'text-text-primary' : 'text-text-muted'}`}>7d</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setTimeRange(30)}
+              className={`px-3 py-1.5 rounded-lg ${timeRange === 30 ? 'bg-bg-card shadow-sm border border-border/50' : ''}`}
+            >
+              <Text className={`text-xs font-semibold ${timeRange === 30 ? 'text-text-primary' : 'text-text-muted'}`}>30d</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {loading ? (
           <ActivityIndicator color="#7C6AF5" className="mt-12" size="large" />

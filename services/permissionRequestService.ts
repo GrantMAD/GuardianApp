@@ -16,20 +16,24 @@ export interface PermissionRequest {
   installed_apps?: { app_name: string; icon_url: string | null };
 }
 
-export async function getTodayApprovedExtraMinutes(childId: string): Promise<number> {
+export async function getTodayApprovedExtraMinutes(childId: string): Promise<Record<string, number>> {
   const today = new Date().toISOString().slice(0, 10);
   
   const { data, error } = await supabase
     .from('permission_requests')
-    .select('approved_minutes, created_at')
+    .select('app_id, approved_minutes, created_at')
     .eq('child_id', childId)
     .eq('status', 'approved')
     .gte('created_at', `${today}T00:00:00.000Z`)
     .lt('created_at', `${today}T23:59:59.999Z`);
     
-  if (error || !data) return 0;
+  if (error || !data) return {};
   
-  return data.reduce((total, req) => total + (req.approved_minutes ?? 0), 0);
+  return data.reduce((acc, req) => {
+    const key = req.app_id || 'any';
+    acc[key] = (acc[key] || 0) + (req.approved_minutes ?? 0);
+    return acc;
+  }, {} as Record<string, number>);
 }
 
 export async function getPendingRequests(familyId: string): Promise<PermissionRequest[]> {

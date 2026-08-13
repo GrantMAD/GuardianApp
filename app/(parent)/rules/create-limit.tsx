@@ -10,6 +10,7 @@ import { useFamilyStore } from '@/store/familyStore';
 import { createRule } from '@/services/ruleService';
 import { getInstalledApps } from '@/services/usageService';
 import { formatMinutes } from '@/utils/formatTime';
+import { APP_CATEGORIES, AppCategory } from '@/constants/categories';
 import Toast from 'react-native-toast-message';
 import BackButton from '@/components/ui/BackButton';
 
@@ -18,7 +19,9 @@ export default function CreateTimeLimitScreen() {
   const { selectedChildId } = useFamilyStore();
 
   const [limitMins, setLimitMins]   = useState(60);
+  const [mode, setMode]             = useState<'app' | 'category'>('app');
   const [appId, setAppId]           = useState<string | undefined>();
+  const [selectedCategory, setSelectedCategory] = useState<AppCategory | undefined>();
   const [apps, setApps]             = useState<any[]>([]);
   const [appSearch, setAppSearch]   = useState('');
   const [loading, setLoading]       = useState(false);
@@ -39,7 +42,9 @@ export default function CreateTimeLimitScreen() {
     if (!selectedChildId) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'No child selected.' }); return; }
     setLoading(true);
     try {
-      await createRule(selectedChildId, 'TIME_LIMIT', appId, undefined, limitMins);
+      const appIdParam = mode === 'app' ? appId : undefined;
+      const categoryParam = mode === 'category' ? selectedCategory : undefined;
+      await createRule(selectedChildId, 'TIME_LIMIT', appIdParam, categoryParam, limitMins);
       Toast.show({ type: 'success', text1: 'Time Limit Created', text2: `Set to ${formatMinutes(limitMins)}.` });
       router.back();
     } catch (e: any) {
@@ -87,36 +92,71 @@ export default function CreateTimeLimitScreen() {
         {/* App selector */}
         <Text className="text-text-muted text-sm font-medium mb-2">Apply to (optional)</Text>
         <Text className="text-text-muted text-xs mb-2">Leave blank to apply to ALL apps.</Text>
-
-        {selectedApp && (
-          <View className="flex-row items-center bg-accent/10 border border-accent/40 rounded-xl px-4 py-3 mb-3 justify-between">
-            <Text className="text-accent font-semibold">{selectedApp.app_name}</Text>
-            <TouchableOpacity onPress={() => setAppId(undefined)}>
-              <Text className="text-text-muted text-xs">Clear</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <TextInput
-          id="search-app-for-limit"
-          value={appSearch}
-          onChangeText={(t) => { setAppSearch(t); loadApps(); }}
-          onFocus={loadApps}
-          placeholder="Search for an app…"
-          placeholderTextColor="#9090A8"
-          className="bg-bg-card border border-border rounded-2xl px-4 py-3 text-text-primary text-base mb-2"
-        />
-        {appsLoading && <ActivityIndicator color="#7C6AF5" />}
-        {!appsLoading && filteredApps.slice(0, 8).map((a) => (
-          <TouchableOpacity
-            key={a.id}
-            onPress={() => { setAppId(a.id); setAppSearch(a.app_name); }}
-            className="px-4 py-3 bg-bg-elevated rounded-xl mb-1 flex-row items-center"
+        
+        <View className="flex-row bg-bg-elevated rounded-xl p-1 mb-6 mt-2">
+          <TouchableOpacity 
+            onPress={() => setMode('app')}
+            className={`flex-1 items-center py-2 rounded-lg ${mode === 'app' ? 'bg-bg-card shadow-sm border border-border/50' : ''}`}
           >
-            <Text className="text-text-primary flex-1">{a.app_name}</Text>
-            {appId === a.id && <Text className="text-accent">✓</Text>}
+            <Text className={`font-semibold ${mode === 'app' ? 'text-text-primary' : 'text-text-muted'}`}>Specific App</Text>
           </TouchableOpacity>
-        ))}
+          <TouchableOpacity 
+            onPress={() => setMode('category')}
+            className={`flex-1 items-center py-2 rounded-lg ${mode === 'category' ? 'bg-bg-card shadow-sm border border-border/50' : ''}`}
+          >
+            <Text className={`font-semibold ${mode === 'category' ? 'text-text-primary' : 'text-text-muted'}`}>App Category</Text>
+          </TouchableOpacity>
+        </View>
+
+        {mode === 'app' ? (
+          <>
+            {selectedApp && (
+              <View className="flex-row items-center bg-accent/10 border border-accent/40 rounded-xl px-4 py-3 mb-3 justify-between">
+                <Text className="text-accent font-semibold">{selectedApp.app_name}</Text>
+                <TouchableOpacity onPress={() => setAppId(undefined)}>
+                  <Text className="text-text-muted text-xs">Clear</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TextInput
+              id="search-app-for-limit"
+              value={appSearch}
+              onChangeText={(t) => { setAppSearch(t); loadApps(); }}
+              onFocus={loadApps}
+              placeholder="Search for an app…"
+              placeholderTextColor="#9090A8"
+              className="bg-bg-card border border-border rounded-2xl px-4 py-3 text-text-primary text-base mb-2"
+            />
+            {appsLoading && <ActivityIndicator color="#7C6AF5" />}
+            {!appsLoading && filteredApps.slice(0, 8).map((a) => (
+              <TouchableOpacity
+                key={a.id}
+                onPress={() => { setAppId(a.id); setAppSearch(a.app_name); }}
+                className="px-4 py-3 bg-bg-elevated rounded-xl mb-1 flex-row items-center"
+              >
+                <Text className="text-text-primary flex-1">{a.app_name}</Text>
+                {appId === a.id && <Text className="text-accent">✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </>
+        ) : (
+          <>
+            {APP_CATEGORIES.map((c) => (
+              <TouchableOpacity
+                key={c.value}
+                onPress={() => setSelectedCategory(c.value === selectedCategory ? undefined : c.value)}
+                className={`px-4 py-3 rounded-xl mb-2 flex-row items-center border ${
+                  selectedCategory === c.value ? 'bg-accent/10 border-accent/40' : 'bg-bg-elevated border-border'
+                }`}
+              >
+                <Text className="text-xl mr-3">{c.emoji}</Text>
+                <Text className="text-text-primary flex-1">{c.label}</Text>
+                {selectedCategory === c.value && <Text className="text-accent font-bold">✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
 
         <TouchableOpacity
           id="btn-save-limit"

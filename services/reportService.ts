@@ -37,7 +37,8 @@ export interface AuditLogEntry {
  */
 export async function getWeeklyUsage(
   childId: string,
-  startDate: string
+  startDate: string,
+  days: number = 7
 ): Promise<PeriodUsageSummary[]> {
   const { data, error } = await supabase
     .from('app_usage_logs')
@@ -47,7 +48,7 @@ export async function getWeeklyUsage(
     `)
     .eq('child_id', childId)
     .gte('date', startDate)
-    .lte('date', new Date(new Date(startDate).getTime() + 6 * 86400000).toISOString().split('T')[0])
+    .lte('date', new Date(new Date(startDate).getTime() + (days - 1) * 86400000).toISOString().split('T')[0])
     .order('date', { ascending: true })
     .order('usage_minutes', { ascending: false });
 

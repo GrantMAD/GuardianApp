@@ -82,7 +82,7 @@ export default function ChildHomeScreen() {
   const [requestMinutes, setRequestMinutes] = useState(15);
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
-  const [extraMinutes, setExtraMinutes] = useState(0);
+  const [extraMinutes, setExtraMinutes] = useState<Record<string, number>>({});
 
   const child = children.find((c) => c.id === selectedChildId);
   const today = new Date().toISOString().slice(0, 10);
@@ -170,16 +170,17 @@ export default function ChildHomeScreen() {
       let isBlocked = false;
 
       // 1. Evaluate Manual Blocks
-      const blockRule = activeRules.find((r) => r.app_id === appId && r.rule_type === 'BLOCK');
+      const blockRule = activeRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'BLOCK');
       if (blockRule) isBlocked = true;
 
       // 2. Evaluate Time Limits
       if (!isBlocked) {
-        const timeRule = activeRules.find((r) => r.app_id === appId && r.rule_type === 'TIME_LIMIT');
+        const timeRule = activeRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'TIME_LIMIT');
         if (timeRule) {
           const usage = usageData.find((u) => u.app_id === appId);
           const usedMinutes = usage?.usage_minutes ?? 0;
-          const limit = (timeRule.daily_limit_minutes ?? 0) + extraMinutes;
+          const appExtra = (extraMinutes[appId] || 0) + (extraMinutes['any'] || 0);
+          const limit = (timeRule.daily_limit_minutes ?? 0) + appExtra;
           
           if (limit > 0 && usedMinutes >= limit) {
             isBlocked = true;
@@ -261,27 +262,50 @@ export default function ChildHomeScreen() {
 
   // Apps that have any active restriction (TIME_LIMIT or BLOCK)
   const restrictedApps = installedApps.filter((app: any) =>
-    activeRules.some((r) => r.app_id === app.id)
+    activeRules.some((r) => r.app_id === app.id || (r.category === app.category && !r.app_id))
   );
 
   // Apps with a time limit rule — derived from rules so 0-usage apps still appear
+  // Map category rules into app-specific rows for the UI
   const limitedApps = activeRules
-    .filter((r) => r.rule_type === 'TIME_LIMIT' && r.app_id)
-    .map((r) => {
-      const appInfo = installedApps.find((a: any) => a.id === r.app_id);
-      const usage = usageData.find((u: any) => u.app_id === r.app_id);
-      return {
-        app_id: r.app_id,
-        app_name: appInfo?.app_name ?? 'App',
-        usage_minutes: usage?.usage_minutes ?? 0,
-        daily_limit_minutes: r.daily_limit_minutes,
-      };
+    .filter((r) => r.rule_type === 'TIME_LIMIT')
+    .flatMap((r) => {
+      if (r.app_id) {
+        const appInfo = installedApps.find((a: any) => a.id === r.app_id);
+        const usage = usageData.find((u: any) => u.app_id === r.app_id);
+        const appExtra = (extraMinutes[r.app_id] || 0) + (extraMinutes['any'] || 0);
+        return [{
+          app_id: r.app_id,
+          app_name: appInfo?.app_name ?? 'App',
+          usage_minutes: usage?.usage_minutes ?? 0,
+          daily_limit_minutes: (r.daily_limit_minutes ?? 0) + appExtra,
+        }];
+      } else if (r.category) {
+        // Expand category rule to all matching apps
+        return installedApps
+          .filter((a: any) => a.category === r.category)
+          .map((appInfo: any) => {
+            const usage = usageData.find((u: any) => u.app_id === appInfo.id);
+            const appExtra = (extraMinutes[appInfo.id] || 0) + (extraMinutes['any'] || 0);
+            return {
+              app_id: appInfo.id,
+              app_name: appInfo.app_name,
+              usage_minutes: usage?.usage_minutes ?? 0,
+              daily_limit_minutes: (r.daily_limit_minutes ?? 0) + appExtra,
+            };
+          });
+      }
+      return [];
     });
 
   // Apps that are outright blocked
   const blockedApps = activeRules
     .filter((r) => r.rule_type === 'BLOCK')
-    .map((r) => r.app_id);
+    .flatMap((r) => {
+      if (r.app_id) return [r.app_id];
+      if (r.category) return installedApps.filter((a: any) => a.category === r.category).map((a: any) => a.id);
+      return [];
+    });
 
   // Apps blocked by an active schedule
   const scheduledBlock = activeSchedules.some((s) => isScheduleActive(s));
@@ -300,10 +324,21 @@ export default function ChildHomeScreen() {
 
   // Build blocked app rows with icon info
   const blockedAppRows = activeRules
-    .filter((r) => r.rule_type === 'BLOCK' && r.app_id)
-    .map((r) => {
-      const appInfo = installedApps.find((a: any) => a.id === r.app_id);
-      return { ruleId: r.id, app_name: appInfo?.app_name ?? 'App', icon_url: appInfo?.icon_url ?? null };
+    .filter((r) => r.rule_type === 'BLOCK')
+    .flatMap((r) => {
+      if (r.app_id) {
+        const appInfo = installedApps.find((a: any) => a.id === r.app_id);
+        return [{ ruleId: r.id, app_name: appInfo?.app_name ?? 'App', icon_url: appInfo?.icon_url ?? null }];
+      } else if (r.category) {
+        return installedApps
+          .filter((a: any) => a.category === r.category)
+          .map((appInfo: any) => ({
+            ruleId: `${r.id}-${appInfo.id}`,
+            app_name: appInfo.app_name,
+            icon_url: appInfo.icon_url ?? null
+          }));
+      }
+      return [];
     });
 
   return (
@@ -443,7 +478,7 @@ export default function ChildHomeScreen() {
               SCREEN TIME LIMITS
             </Text>
             {limitedApps.map((item: any) => {
-              const limit = (item.daily_limit_minutes ?? 60) + extraMinutes;
+              const limit = item.daily_limit_minutes ?? 60;
               const used = item.usage_minutes;
               const remaining = Math.max(limit - used, 0);
               const fraction = limit > 0 ? Math.min(used / limit, 1) : 0;
