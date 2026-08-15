@@ -11,6 +11,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { formatMinutes } from '@/utils/formatTime';
 import { CATEGORY_COLORS } from '@/constants/categories';
+import Toast from 'react-native-toast-message';
 
 export default function ReportsScreen() {
   const { selectedChildId, children } = useFamilyStore();
@@ -55,7 +56,7 @@ export default function ReportsScreen() {
       }
       setWeekData(days);
     } catch (error) {
-      console.error(error);
+      Toast.show({ type: 'error', text1: 'Failed to load reports' });
     } finally {
       setLoading(false);
       setRefreshing(false);

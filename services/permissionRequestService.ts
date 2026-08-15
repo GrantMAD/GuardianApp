@@ -50,8 +50,7 @@ export async function getPendingRequests(familyId: string): Promise<PermissionRe
     .order('created_at', { ascending: false });
 
   if (error || !data) {
-    console.error('Error fetching pending requests:', error);
-    return [];
+    throw new Error(error?.message ?? 'Error fetching pending requests');
   }
   
   return data as unknown as PermissionRequest[];
@@ -68,8 +67,7 @@ export async function updateRequestStatus(requestId: string, status: 'approved' 
     .eq('id', requestId);
     
   if (error) {
-    console.error('Error updating request status:', error);
-    return false;
+    throw new Error(error?.message ?? 'Error updating request status');
   }
   return true;
 }

@@ -22,6 +22,7 @@ import { getPendingRequests, updateRequestStatus, PermissionRequest } from '@/se
 import { PermissionRequestCard } from '@/components/ui/PermissionRequestCard';
 
 import { Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -88,6 +89,8 @@ export default function DashboardScreen() {
         setInstalledApps(apps ?? []);
         setTotalMins(summary?.total_minutes ?? 0);
       }
+    } catch (e) {
+      Toast.show({ type: 'error', text1: 'Failed to load dashboard', text2: 'Pull down to retry' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -100,16 +103,20 @@ export default function DashboardScreen() {
   const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleApproveRequest = async (requestId: string, extraMinutes: number) => {
-    const success = await updateRequestStatus(requestId, 'approved', extraMinutes);
-    if (success) {
+    try {
+      await updateRequestStatus(requestId, 'approved', extraMinutes);
       setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+    } catch (e) {
+      Toast.show({ type: 'error', text1: 'Failed to approve request' });
     }
   };
 
   const handleDenyRequest = async (requestId: string) => {
-    const success = await updateRequestStatus(requestId, 'denied');
-    if (success) {
+    try {
+      await updateRequestStatus(requestId, 'denied');
       setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+    } catch (e) {
+      Toast.show({ type: 'error', text1: 'Failed to deny request' });
     }
   };
 
@@ -147,8 +154,7 @@ export default function DashboardScreen() {
       });
       Alert.alert('Success', `Device paused for ${minutes} minutes.`);
     } catch (e) {
-      console.error(e);
-      Alert.alert('Error', 'Failed to pause device');
+      Toast.show({ type: 'error', text1: 'Failed to pause device' });
     }
   };
 

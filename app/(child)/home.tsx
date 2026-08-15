@@ -16,6 +16,7 @@ import { formatMinutes } from '@/utils/formatTime';
 import { isScheduleActive, isAppBlockedBySchedule } from '@/utils/scheduleEvaluator';
 import AppBlockerModule from '@/modules/android/AppBlockerModule';
 import * as Notifications from 'expo-notifications';
+import Toast from 'react-native-toast-message';
 import { getTodayApprovedExtraMinutes } from '@/services/permissionRequestService';
 import { isSetupComplete } from '@/app/(child)/setup';
 import { useRouter } from 'expo-router';
@@ -241,7 +242,7 @@ export default function ChildHomeScreen() {
       setRequestSent(true);
       setTimeout(() => setRequestSent(false), 3000);
     } catch (e) {
-      console.error(e);
+      Toast.show({ type: 'error', text1: 'Could not send request', text2: 'Please try again' });
     }
   };
 

@@ -45,7 +45,6 @@ export default function SettingsScreen() {
       await updateFamilyTheme(family.id, newTheme);
       Toast.show({ type: 'success', text1: 'Theme Updated', text2: `App theme changed to ${newTheme}.` });
     } catch (err) {
-      console.error('Failed to update theme', err);
       setTheme(theme);
       Toast.show({ type: 'error', text1: 'Update Failed', text2: 'Could not update theme.' });
     }
