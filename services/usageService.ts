@@ -7,6 +7,23 @@ export interface UsageLog {
   date: string; // YYYY-MM-DD
   usage_minutes: number;
   last_used_at: string | null;
+  installed_apps?: {
+    package_name: string;
+    app_name: string;
+    category: string;
+    icon_url?: string;
+  };
+}
+
+export interface InstalledApp {
+  id: string;
+  child_id: string;
+  package_name: string;
+  app_name: string;
+  category: string;
+  is_system_app: boolean;
+  is_visible: boolean;
+  icon_url?: string;
 }
 
 export interface DailyScreenTime {

@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { getWeeklyUsage } from '@/services/reportService';
+import { UsageLogWithApp } from '@/utils/usageHelpers';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatCard } from '@/components/ui/StatCard';
@@ -18,7 +19,7 @@ export default function ReportsScreen() {
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState<7 | 30>(7);
-  const [weekData, setWeekData]   = useState<{ date: string; label: string; total: number; data: any[] }[]>([]);
+  const [weekData, setWeekData]   = useState<{ date: string; label: string; total: number; data: UsageLogWithApp[] }[]>([]);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
 
   const toggleDate = (date: string) => {
@@ -37,7 +38,7 @@ export default function ReportsScreen() {
       
       const usageData = await getWeeklyUsage(selectedChildId, startDate, timeRange);
       
-      const days: { date: string; label: string; total: number; data: any[] }[] = [];
+      const days: { date: string; label: string; total: number; data: UsageLogWithApp[] }[] = [];
       for (let i = timeRange - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
@@ -72,7 +73,7 @@ export default function ReportsScreen() {
   // Top apps across the whole week
   const appTotals: Record<string, { label: string; minutes: number; color: string }> = {};
   weekData.forEach((day) => {
-    day.data.forEach((u: any) => {
+    day.data.forEach((u: UsageLogWithApp) => {
       const name = u.installed_apps?.app_name ?? 'Unknown';
       const cat  = u.installed_apps?.category ?? 'other';
       if (!appTotals[name]) {
@@ -183,7 +184,7 @@ export default function ReportsScreen() {
                     <View className="px-4 pb-4">
                       {day.data.length > 0 ? (
                         <UsageBarChart
-                          data={day.data.slice(0, 4).map((u: any) => ({
+                          data={day.data.slice(0, 4).map((u: UsageLogWithApp) => ({
                             label: u.installed_apps?.app_name ?? 'App',
                             minutes: u.usage_minutes,
                             color: CATEGORY_COLORS[u.installed_apps?.category as keyof typeof CATEGORY_COLORS] ?? '#7C6AF5',

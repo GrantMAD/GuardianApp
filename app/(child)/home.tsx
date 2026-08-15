@@ -9,7 +9,7 @@ import { useAgentStore } from '@/store/agentStore';
 import { useFamilyStore } from '@/store/familyStore';
 import { getRules } from '@/services/ruleService';
 import { getSchedules } from '@/services/scheduleService';
-import { getDailyUsage, getInstalledApps } from '@/services/usageService';
+import { getDailyUsage, getInstalledApps, UsageLog, InstalledApp } from '@/services/usageService';
 import { supabase } from '@/services/supabase';
 import { TimeRing } from '@/components/ui/TimeRing';
 import { formatMinutes } from '@/utils/formatTime';
@@ -70,8 +70,8 @@ export default function ChildHomeScreen() {
     }
   }, []);
 
-  const [usageData, setUsageData]   = useState<any[]>([]);
-  const [installedApps, setInstalledApps] = useState<any[]>([]);
+  const [usageData, setUsageData]   = useState<UsageLog[]>([]);
+  const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
   const previouslyBlockedPackages = useRef<Set<string>>(new Set());
   const warnedApps = useRef<Set<string>>(new Set());
   
@@ -201,7 +201,7 @@ export default function ChildHomeScreen() {
 
       // 3. Evaluate Schedules
       if (!isBlocked) {
-        if (isAppBlockedBySchedule(activeSchedules, packageName, category, appId)) {
+        if (isAppBlockedBySchedule(activeSchedules, packageName, category as any, appId)) {
           isBlocked = true;
         }
       }
@@ -279,7 +279,7 @@ export default function ChildHomeScreen() {
   };
 
   // Apps that have any active restriction (TIME_LIMIT or BLOCK)
-  const restrictedApps = installedApps.filter((app: any) =>
+  const restrictedApps = installedApps.filter((app: InstalledApp) =>
     activeRules.some((r) => r.app_id === app.id || (r.category === app.category && !r.app_id))
   );
 
@@ -289,8 +289,8 @@ export default function ChildHomeScreen() {
     .filter((r) => r.rule_type === 'TIME_LIMIT')
     .flatMap((r) => {
       if (r.app_id) {
-        const appInfo = installedApps.find((a: any) => a.id === r.app_id);
-        const usage = usageData.find((u: any) => u.app_id === r.app_id);
+        const appInfo = installedApps.find((a: InstalledApp) => a.id === r.app_id);
+        const usage = usageData.find((u: UsageLog) => u.app_id === r.app_id);
         const appExtra = (extraMinutes[r.app_id] || 0) + (extraMinutes['any'] || 0);
         return [{
           app_id: r.app_id,
@@ -301,9 +301,9 @@ export default function ChildHomeScreen() {
       } else if (r.category) {
         // Expand category rule to all matching apps
         return installedApps
-          .filter((a: any) => a.category === r.category)
-          .map((appInfo: any) => {
-            const usage = usageData.find((u: any) => u.app_id === appInfo.id);
+          .filter((a: InstalledApp) => a.category === r.category)
+          .map((appInfo: InstalledApp) => {
+            const usage = usageData.find((u: UsageLog) => u.app_id === appInfo.id);
             const appExtra = (extraMinutes[appInfo.id] || 0) + (extraMinutes['any'] || 0);
             return {
               app_id: appInfo.id,
@@ -321,7 +321,7 @@ export default function ChildHomeScreen() {
     .filter((r) => r.rule_type === 'BLOCK')
     .flatMap((r) => {
       if (r.app_id) return [r.app_id];
-      if (r.category) return installedApps.filter((a: any) => a.category === r.category).map((a: any) => a.id);
+      if (r.category) return installedApps.filter((a: InstalledApp) => a.category === r.category).map((a: InstalledApp) => a.id);
       return [];
     });
 
@@ -345,12 +345,12 @@ export default function ChildHomeScreen() {
     .filter((r) => r.rule_type === 'BLOCK')
     .flatMap((r) => {
       if (r.app_id) {
-        const appInfo = installedApps.find((a: any) => a.id === r.app_id);
+        const appInfo = installedApps.find((a: InstalledApp) => a.id === r.app_id);
         return [{ ruleId: r.id, app_id: r.app_id, app_name: appInfo?.app_name ?? 'App', icon_url: appInfo?.icon_url ?? null }];
       } else if (r.category) {
         return installedApps
-          .filter((a: any) => a.category === r.category)
-          .map((appInfo: any) => ({
+          .filter((a: InstalledApp) => a.category === r.category)
+          .map((appInfo: InstalledApp) => ({
             ruleId: `${r.id}-${appInfo.id}`,
             app_id: appInfo.id,
             app_name: appInfo.app_name,
@@ -505,7 +505,7 @@ export default function ChildHomeScreen() {
               const barColor = fraction >= 1 ? '#EF4444' : fraction >= 0.75 ? '#F59E0B' : '#7C6AF5';
 
               // Find the full app info for the icon
-              const appInfo = installedApps.find((a: any) => a.id === item.app_id);
+              const appInfo = installedApps.find((a: InstalledApp) => a.id === item.app_id);
 
               return (
                 <View
@@ -747,7 +747,7 @@ export default function ChildHomeScreen() {
                       Any App
                     </Text>
                   </TouchableOpacity>
-                  {restrictedApps.map((app: any) => (
+                  {restrictedApps.map((app: InstalledApp) => (
                     <TouchableOpacity
                       key={app.id}
                       onPress={() => setRequestAppId(app.id)}

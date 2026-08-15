@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { useAuthStore } from '@/store/authStore';
 import { getFamily, getChildren, createFamily } from '@/services/childService';
-import { getDailyUsage, getDailyScreenTimeSummary, getInstalledApps } from '@/services/usageService';
+import { getDailyUsage, getDailyScreenTimeSummary, getInstalledApps, UsageLog, InstalledApp } from '@/services/usageService';
 import { createSchedule } from '@/services/scheduleService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { StatCard } from '@/components/ui/StatCard';
@@ -54,8 +54,8 @@ export default function DashboardScreen() {
   const { family, children, selectedChildId, setFamily, setChildren, setSelectedChildId } = useFamilyStore();
 
   const [refreshing, setRefreshing]   = useState(false);
-  const [usageData, setUsageData]     = useState<any[]>([]);
-  const [installedApps, setInstalledApps] = useState<any[]>([]);
+  const [usageData, setUsageData]     = useState<UsageLog[]>([]);
+  const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
   const [totalMins, setTotalMins]     = useState<number | null>(null);
   const [loading, setLoading]         = useState(true);
   const [pendingRequests, setPendingRequests] = useState<PermissionRequest[]>([]);
@@ -178,8 +178,8 @@ export default function DashboardScreen() {
     }
   };
 
-  const installedAppMap = new Map(installedApps.map((app: any) => [app.id, app]));
-  const chartData = usageData.slice(0, 5).map((u: any) => {
+  const installedAppMap = new Map(installedApps.map((app: InstalledApp) => [app.id, app]));
+  const chartData = usageData.slice(0, 5).map((u: UsageLog) => {
     const fallbackApp = installedAppMap.get(u.app_id);
     const appName = u.installed_apps?.app_name ?? fallbackApp?.app_name;
     const packageName = u.installed_apps?.package_name ?? fallbackApp?.package_name;
