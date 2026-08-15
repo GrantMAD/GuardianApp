@@ -18,33 +18,8 @@ import { formatMinutes } from '@/utils/formatTime';
 import { signOut } from '@/services/authService';
 import { CATEGORY_COLORS } from '@/constants/categories';
 import { supabase } from '@/services/supabase';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { getPendingRequests, updateRequestStatus, PermissionRequest } from '@/services/permissionRequestService';
 import { PermissionRequestCard } from '@/components/ui/PermissionRequestCard';
-
-async function registerForPushNotificationsAsync(familyId: string) {
-  if (!Device.isDevice) return;
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-  if (finalStatus !== 'granted') return;
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
-
-  await supabase.from('families').update({ push_token: token }).eq('id', familyId);
-}
 
 import { Alert } from 'react-native';
 
@@ -92,7 +67,6 @@ export default function DashboardScreen() {
         if (!selectedChildId && kids.length > 0) setSelectedChildId(kids[0].id);
 
         // Push notifications & requests
-        registerForPushNotificationsAsync(fam.id);
         const reqs = await getPendingRequests(fam.id);
         setPendingRequests(reqs);
 

@@ -9,6 +9,7 @@ import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '@/components/ui/ToastConfig';
+import { usePushToken } from '@/hooks/usePushToken';
 
 // Theme is applied dynamically in AuthGuard using familyStore
 
@@ -19,6 +20,8 @@ function AuthGuard() {
   const segments = useSegments();
   const { session, role, childId, setSession, setUser } = useAuthStore();
   const { theme } = require('@/store/familyStore').useFamilyStore();
+
+  usePushToken();
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {

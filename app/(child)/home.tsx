@@ -15,7 +15,6 @@ import { TimeRing } from '@/components/ui/TimeRing';
 import { formatMinutes } from '@/utils/formatTime';
 import { isScheduleActive, isAppBlockedBySchedule } from '@/utils/scheduleEvaluator';
 import AppBlockerModule from '@/modules/android/AppBlockerModule';
-import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { getTodayApprovedExtraMinutes } from '@/services/permissionRequestService';
 import { isSetupComplete } from '@/app/(child)/setup';
@@ -30,31 +29,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-async function registerForPushNotificationsAsync(childId: string) {
-  if (!Device.isDevice) return;
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-  if (finalStatus !== 'granted') return;
-  
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
-
-  // Update supabase
-  await supabase.from('children').update({ push_token: token }).eq('id', childId);
-}
 
 export default function ChildHomeScreen() {
   const router = useRouter();
@@ -108,13 +82,6 @@ export default function ChildHomeScreen() {
   };
 
   useEffect(() => { load(); }, [selectedChildId]);
-
-  // Register push notifications
-  useEffect(() => {
-    if (selectedChildId) {
-      registerForPushNotificationsAsync(selectedChildId);
-    }
-  }, [selectedChildId]);
 
   // Polling loop for sync & Realtime listener
   useEffect(() => {
