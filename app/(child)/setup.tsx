@@ -21,7 +21,25 @@ interface Step {
 
 export async function isSetupComplete(): Promise<boolean> {
   const val = await AsyncStorage.getItem(SETUP_KEY);
-  return val === 'true';
+  if (val !== 'true') return false;
+
+  if (Platform.OS === 'android') {
+    try {
+      const hasUsage = (await AppBlockerModule.hasUsageStatsPermission?.()) ?? false;
+      const hasAccess = (await AppBlockerModule.isAccessibilityEnabled?.()) ?? false;
+      const hasAdmin = (await AppBlockerModule.isDeviceAdminEnabled?.()) ?? false;
+
+      if (!hasUsage || !hasAccess || !hasAdmin) {
+        // If any required permission was revoked, reset the flag and return false
+        await AsyncStorage.removeItem(SETUP_KEY);
+        return false;
+      }
+    } catch (e) {
+      console.warn('Failed to verify permissions in isSetupComplete:', e);
+    }
+  }
+
+  return true;
 }
 
 export default function SetupScreen() {

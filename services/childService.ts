@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logParentAction } from './auditService';
 
 export interface Family {
   id: string;
@@ -84,6 +85,13 @@ export async function addChild(familyId: string, name: string) {
     .single();
 
   if (error) throw error;
+
+  try {
+    await logParentAction(familyId, 'CHILD_ADDED', `Added child profile for ${name}`, data.id);
+  } catch (e) {
+    console.warn('Failed to log CHILD_ADDED', e);
+  }
+
   return data as Child;
 }
 

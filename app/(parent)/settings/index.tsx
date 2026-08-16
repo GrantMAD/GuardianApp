@@ -121,6 +121,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
 
           {[
+            { label: '📋 Activity Log', route: '/(parent)/settings/activity-log' as const },
             { label: '🔔 Notification Settings', route: '/(parent)/settings/notifications' as const },
             { label: '🔒 Privacy Policy', route: '/(parent)/settings/privacy' as const },
             { label: '📄 Terms of Service', route: '/(parent)/settings/terms' as const },

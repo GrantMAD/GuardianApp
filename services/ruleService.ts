@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { AppCategory } from '@/constants/categories';
+import { logParentAction } from './auditService';
 
 export interface Rule {
   id: string;
@@ -48,14 +49,48 @@ export async function createRule(
     .single();
 
   if (error) throw error;
+
+  // Log action
+  try {
+    const { data: child } = await supabase.from('children').select('family_id').eq('id', childId).single();
+    if (child?.family_id) {
+      await logParentAction(
+        child.family_id,
+        'RULE_CREATED',
+        `Created ${ruleType} rule`,
+        childId
+      );
+    }
+  } catch (e) {
+    console.warn('Failed to log RULE_CREATED', e);
+  }
+
   return data as Rule;
 }
 
 export async function deleteRule(ruleId: string) {
+  // Fetch child_id and family_id before deleting
+  let familyId = null;
+  let childId = null;
+  try {
+    const { data: rule } = await supabase.from('rules').select('child_id').eq('id', ruleId).single();
+    if (rule?.child_id) {
+      childId = rule.child_id;
+      const { data: child } = await supabase.from('children').select('family_id').eq('id', rule.child_id).single();
+      familyId = child?.family_id;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch rule info for audit logging', e);
+  }
+
   const { error } = await supabase
     .from('rules')
     .delete()
     .eq('id', ruleId);
 
   if (error) throw error;
+
+  if (familyId) {
+    await logParentAction(familyId, 'RULE_REMOVED', `Removed a rule`, childId);
+  }
 }
