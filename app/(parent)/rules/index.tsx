@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, Image,
+  View, Text, ScrollView, TouchableOpacity, StatusBar, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { getRules, deleteRule } from '@/services/ruleService';
+
+import { Skeleton } from '@/components/ui/Skeleton';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { formatMinutes } from '@/utils/formatTime';
 import { KNOWN_ICONS } from '@/constants/appIcons';
@@ -93,7 +95,11 @@ export default function RulesScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#7C6AF5" className="mt-8" />
+          <View className="mt-8 gap-y-3">
+            <Skeleton style={{ height: 72, width: '100%' }} />
+            <Skeleton style={{ height: 72, width: '100%' }} />
+            <Skeleton style={{ height: 72, width: '100%' }} />
+          </View>
         ) : (
           <>
             {/* Time Limits */}

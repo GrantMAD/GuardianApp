@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 
 export default function ChildLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: false, animation: 'fade' }}>
       <Stack.Screen name="home" />
       <Stack.Screen name="app-blocked" />
       <Stack.Screen name="request-sent" />

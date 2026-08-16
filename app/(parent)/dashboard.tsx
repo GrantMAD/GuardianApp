@@ -12,6 +12,7 @@ import { getDailyUsage, getDailyScreenTimeSummary, getInstalledApps, UsageLog, I
 import { createSchedule } from '@/services/scheduleService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import { StatCard } from '@/components/ui/StatCard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { formatMinutes } from '@/utils/formatTime';
@@ -291,11 +292,13 @@ export default function DashboardScreen() {
             <View className="flex-row gap-x-3 mb-1">
               <StatCard
                 label="Screen time today"
-                value={loading ? '...' : formatMinutes(totalMins ?? 0)}
+                value={formatMinutes(totalMins ?? 0)}
+                isLoading={loading}
               />
               <StatCard
                 label="Apps used"
-                value={loading ? '...' : String(usageData.length)}
+                value={String(usageData.length)}
+                isLoading={loading}
               />
             </View>
 
@@ -308,7 +311,11 @@ export default function DashboardScreen() {
               onAction={() => router.push('/(parent)/apps')}
             />
             {loading ? (
-              <ActivityIndicator color="#7C6AF5" className="my-4" />
+              <View className="bg-bg-card rounded-2xl p-4 border border-border gap-y-3">
+                <Skeleton style={{ height: 100, width: '100%', marginBottom: 12 }} />
+                <Skeleton style={{ height: 24, width: '100%' }} />
+                <Skeleton style={{ height: 24, width: '100%' }} />
+              </View>
             ) : chartData.length > 0 ? (
               <View className="bg-bg-card rounded-2xl p-4 border border-border">
                 <UsageBarChart data={chartData} />

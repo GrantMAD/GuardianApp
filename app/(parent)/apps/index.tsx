@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StatusBar, ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
-import { getInstalledApps, getDailyUsage } from '@/services/usageService';
-import { getRules } from '@/services/ruleService';
+import { getInstalledApps, getDailyUsage, InstalledApp } from '@/services/usageService';
+import { getRules, Rule } from '@/services/ruleService';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { AppCard } from '@/components/ui/AppCard';
 import { CategoryChip } from '@/components/ui/CategoryChip';
 import type { AppCategory } from '@/constants/categories';
@@ -107,7 +108,11 @@ export default function AppListScreen() {
 
       {/* List */}
       {loading ? (
-        <ActivityIndicator color="#7C6AF5" className="mt-8" />
+        <ScrollView className="flex-1 px-5 pt-1 mt-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} style={{ height: 64, width: '100%', marginBottom: 12 }} />
+          ))}
+        </ScrollView>
       ) : (
         <ScrollView className="flex-1 px-5 pt-1">
           {filtered.length === 0 ? (

@@ -308,6 +308,16 @@ export default function ChildHomeScreen() {
   // Calculate total screen time today
   const totalUsageMinutes = usageData.reduce((acc, curr) => acc + (curr.usage_minutes || 0), 0);
 
+  // Positive Reinforcement Logic
+  const hasExceededLimit = limitedApps.some((app: any) => {
+    const limit = app.daily_limit_minutes ?? 0;
+    const used = app.usage_minutes ?? 0;
+    return limit > 0 && used >= limit;
+  });
+  
+  const isLateInDay = new Date().getHours() >= 17;
+  const showPositiveReinforcement = isLateInDay && !hasExceededLimit && limitedApps.length > 0;
+
   // Build blocked app rows with icon info
   const blockedAppRows = activeRules
     .filter((r) => r.rule_type === 'BLOCK')
@@ -432,6 +442,27 @@ export default function ChildHomeScreen() {
                 <Text style={{ fontSize: 16, marginRight: 8 }}>🕐</Text>
                 <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '600' }}>
                   Apps blocked by schedule right now
+                </Text>
+              </View>
+            )}
+
+            {/* Positive reinforcement banner */}
+            {showPositiveReinforcement && (
+              <View
+                style={{
+                  marginTop: 12,
+                  backgroundColor: 'rgba(34,197,94,0.1)',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: 'rgba(34,197,94,0.3)',
+                  padding: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🎉</Text>
+                <Text style={{ color: '#22C55E', fontSize: 13, fontWeight: '600' }}>
+                  Great job today! You're staying within your limits.
                 </Text>
               </View>
             )}

@@ -33,6 +33,7 @@ export default function ParentLayout() {
   return (
     <Tabs
       screenOptions={{
+        animation: 'shift',
         headerShown: true,
         header: () => <TopNavbar />,
         tabBarStyle: {

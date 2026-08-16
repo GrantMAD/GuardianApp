@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, StatusBar, ActivityIndicator, RefreshControl, TouchableOpacity
+  View, Text, ScrollView, StatusBar, RefreshControl, TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
@@ -9,6 +9,7 @@ import { UsageLogWithApp } from '@/utils/usageHelpers';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { StatCard } from '@/components/ui/StatCard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { formatMinutes } from '@/utils/formatTime';
 import { CATEGORY_COLORS } from '@/constants/categories';
 import Toast from 'react-native-toast-message';
@@ -116,7 +117,17 @@ export default function ReportsScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#7C6AF5" className="mt-12" size="large" />
+          <View className="mt-4 gap-y-3">
+            <View className="flex-row gap-x-3">
+              <Skeleton style={{ height: 80, flex: 1 }} />
+              <Skeleton style={{ height: 80, flex: 1 }} />
+            </View>
+            <View className="flex-row gap-x-3">
+              <Skeleton style={{ height: 80, flex: 1 }} />
+              <Skeleton style={{ height: 80, flex: 1 }} />
+            </View>
+            <Skeleton style={{ height: 200, width: '100%', marginTop: 8 }} />
+          </View>
         ) : (
           <>
             {/* Summary stats */}
