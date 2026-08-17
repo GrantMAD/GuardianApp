@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { RuleBadge } from './RuleBadge';
 import { formatMinutes } from '@/utils/formatTime';
 import { KNOWN_ICONS } from '@/constants/appIcons';

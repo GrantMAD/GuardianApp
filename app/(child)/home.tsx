@@ -2,8 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StatusBar, RefreshControl, Modal, TextInput,
-  ActivityIndicator, Platform, Image,
+  ActivityIndicator, Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAgentStore } from '@/store/agentStore';
 import { useFamilyStore } from '@/store/familyStore';
@@ -84,7 +85,7 @@ export default function ChildHomeScreen() {
 
   useEffect(() => { load(); }, [selectedChildId]);
 
-  // Polling loop for sync & Realtime listener
+  // Sync & Realtime listener
   useEffect(() => {
     if (!selectedChildId) return;
     
@@ -95,14 +96,6 @@ export default function ChildHomeScreen() {
         load();
       });
     });
-
-    const interval = setInterval(() => {
-      import('@/services/usageService').then(({ syncUsageStats }) => {
-        syncUsageStats(selectedChildId).then(() => {
-          load(); // reload UI
-        });
-      });
-    }, 60000); // 60 seconds
 
     const channel = supabase
       .channel('schema-db-changes')
@@ -116,14 +109,46 @@ export default function ChildHomeScreen() {
         },
         (payload) => {
           if (payload.new.status === 'approved') {
-            load(); // Reload rules and extra minutes
+            load(); // Reload extra minutes
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rules',
+          filter: `child_id=eq.${selectedChildId}`,
+        },
+        () => {
+          load(); // Reload rules
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'app_usage_logs',
+          filter: `child_id=eq.${selectedChildId}`,
+        },
+        () => {
+          // If usage changes (from background agent), reload UI
+          load(); 
         }
       )
       .subscribe();
 
+    // Lightweight local timer to sync usage from native to DB without full reload every tick
+    const syncInterval = setInterval(() => {
+      import('@/services/usageService').then(({ syncUsageStats }) => {
+        syncUsageStats(selectedChildId); // just sync to DB, let realtime trigger UI reload if needed
+      });
+    }, 60000);
+
     return () => {
-      clearInterval(interval);
+      clearInterval(syncInterval);
       supabase.removeChannel(channel);
     };
   }, [selectedChildId]);

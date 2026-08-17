@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
+import { Image } from 'expo-image';
 import { COLORS } from '@/constants/theme';
 import { KNOWN_ICONS } from '@/constants/appIcons';
 import { formatMinutes } from '@/utils/formatTime';
