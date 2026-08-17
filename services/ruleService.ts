@@ -54,10 +54,17 @@ export async function createRule(
   try {
     const { data: child } = await supabase.from('children').select('family_id').eq('id', childId).single();
     if (child?.family_id) {
+      let targetName = category || 'an app';
+      if (appId) {
+         const { data: app } = await supabase.from('installed_apps').select('app_name').eq('id', appId).single();
+         if (app?.app_name) targetName = app.app_name;
+      }
+      const ruleTypeName = ruleType === 'BLOCK' ? 'block' : 'time limit';
+      const detail = ruleType === 'TIME_LIMIT' ? ` of ${dailyLimitMinutes} minutes` : '';
       await logParentAction(
         child.family_id,
         'RULE_CREATED',
-        `Created ${ruleType} rule`,
+        `Created ${ruleTypeName} rule${detail} for ${targetName}`,
         childId
       );
     }
@@ -72,12 +79,20 @@ export async function deleteRule(ruleId: string) {
   // Fetch child_id and family_id before deleting
   let familyId = null;
   let childId = null;
+  let targetName = 'a rule';
   try {
-    const { data: rule } = await supabase.from('rules').select('child_id').eq('id', ruleId).single();
+    const { data: rule } = await supabase.from('rules').select('child_id, rule_type, category, app_id').eq('id', ruleId).single();
     if (rule?.child_id) {
       childId = rule.child_id;
       const { data: child } = await supabase.from('children').select('family_id').eq('id', rule.child_id).single();
       familyId = child?.family_id;
+      
+      let target = rule.category || 'an app';
+      if (rule.app_id) {
+         const { data: app } = await supabase.from('installed_apps').select('app_name').eq('id', rule.app_id).single();
+         if (app?.app_name) target = app.app_name;
+      }
+      targetName = `${rule.rule_type === 'BLOCK' ? 'block' : 'time limit'} rule for ${target}`;
     }
   } catch (e) {
     console.warn('Failed to fetch rule info for audit logging', e);
@@ -91,6 +106,6 @@ export async function deleteRule(ruleId: string) {
   if (error) throw error;
 
   if (familyId) {
-    await logParentAction(familyId, 'RULE_REMOVED', `Removed a rule`, childId);
+    await logParentAction(familyId, 'RULE_REMOVED', `Removed ${targetName}`, childId);
   }
 }

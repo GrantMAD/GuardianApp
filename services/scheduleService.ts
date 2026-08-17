@@ -68,10 +68,12 @@ export async function deleteSchedule(scheduleId: string) {
 export async function toggleSchedule(scheduleId: string, isActive: boolean) {
   let familyId = null;
   let childId = null;
+  let scheduleName = 'a schedule';
   try {
-    const { data: sched } = await supabase.from('schedules').select('child_id').eq('id', scheduleId).single();
+    const { data: sched } = await supabase.from('schedules').select('child_id, name').eq('id', scheduleId).single();
     if (sched?.child_id) {
       childId = sched.child_id;
+      scheduleName = sched.name;
       const { data: child } = await supabase.from('children').select('family_id').eq('id', childId).single();
       familyId = child?.family_id;
     }
@@ -87,6 +89,6 @@ export async function toggleSchedule(scheduleId: string, isActive: boolean) {
   if (error) throw error;
 
   if (familyId) {
-    await logParentAction(familyId, 'SCHEDULE_UPDATED', `Toggled a schedule ${isActive ? 'on' : 'off'}`, childId);
+    await logParentAction(familyId, 'SCHEDULE_UPDATED', `Turned ${isActive ? 'on' : 'off'} schedule: ${scheduleName}`, childId);
   }
 }
