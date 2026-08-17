@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, Switch, TouchableOpacity,
-  StatusBar, ActivityIndicator, Image,
+  StatusBar, ActivityIndicator, Image
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { getDailyUsage, getInstalledApps } from '@/services/usageService';
 import { getRules, createRule, deleteRule } from '@/services/ruleService';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { TimeRing } from '@/components/ui/TimeRing';
@@ -25,6 +26,7 @@ export default function AppDetailScreen() {
   const [todayMins, setTodayMins] = useState(0);
   const [loading, setLoading] = useState(true);
   const [appInfo, setAppInfo] = useState<any>(null);
+  const [showDeleteLimit, setShowDeleteLimit] = useState(false);
 
   const loadData = async () => {
     if (!selectedChildId || !appId) return;
@@ -169,7 +171,7 @@ export default function AppDetailScreen() {
               <Text className="text-text-primary font-semibold">Daily Limit</Text>
               <Text className="text-accent text-sm font-medium">{formatMinutes(timeLimit.daily_limit_minutes)}</Text>
             </View>
-            <TouchableOpacity onPress={() => deleteRule(timeLimit.id).then(loadData)}>
+            <TouchableOpacity onPress={() => setShowDeleteLimit(true)}>
               <Text className="text-danger text-sm font-medium">Remove</Text>
             </TouchableOpacity>
           </View>
@@ -187,6 +189,13 @@ export default function AppDetailScreen() {
 
         <View className="h-8" />
       </ScrollView>
+      <ConfirmModal
+        visible={showDeleteLimit}
+        title="Delete Rule"
+        message="Are you sure you want to delete this time limit?"
+        onConfirm={() => timeLimit && deleteRule(timeLimit.id).then(loadData)}
+        onCancel={() => setShowDeleteLimit(false)}
+      />
     </SafeAreaView>
   );
 }

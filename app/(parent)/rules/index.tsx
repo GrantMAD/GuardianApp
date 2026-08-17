@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StatusBar, Image,
+  View, Text, ScrollView, TouchableOpacity, StatusBar, Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { getRules, deleteRule } from '@/services/ruleService';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -17,6 +18,7 @@ export default function RulesScreen() {
   const { selectedChildId, children } = useFamilyStore();
   const [rules, setRules]   = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ruleToDelete, setRuleToDelete] = useState<{ id: string, type: 'time' | 'block' } | null>(null);
 
   const selectedChild = children.find((c) => c.id === selectedChildId);
 
@@ -121,7 +123,7 @@ export default function RulesScreen() {
                     <Text className="text-warning text-sm">{formatMinutes(r.daily_limit_minutes)} / day</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => deleteRule(r.id).then(load)}>
+                <TouchableOpacity onPress={() => setRuleToDelete({ id: r.id, type: 'time' })}>
                   <Text className="text-danger text-sm font-medium">Remove</Text>
                 </TouchableOpacity>
               </View>
@@ -146,7 +148,7 @@ export default function RulesScreen() {
                     <Text className="text-danger text-sm">Blocked</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => deleteRule(r.id).then(load)}>
+                <TouchableOpacity onPress={() => setRuleToDelete({ id: r.id, type: 'block' })}>
                   <Text className="text-danger text-sm font-medium">Remove</Text>
                 </TouchableOpacity>
               </View>
@@ -155,6 +157,13 @@ export default function RulesScreen() {
         )}
         <View className="h-8" />
       </ScrollView>
+      <ConfirmModal
+        visible={!!ruleToDelete}
+        title="Delete Rule"
+        message={`Are you sure you want to delete this ${ruleToDelete?.type === 'time' ? 'time limit' : 'block rule'}?`}
+        onConfirm={() => ruleToDelete && deleteRule(ruleToDelete.id).then(load)}
+        onCancel={() => setRuleToDelete(null)}
+      />
     </SafeAreaView>
   );
 }
