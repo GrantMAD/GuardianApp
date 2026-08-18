@@ -77,6 +77,12 @@ export default function ParentLayout() {
         }}
       />
       <Tabs.Screen
+        name="rewards"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🎁" label="Rewards" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{ href: null }}
       />

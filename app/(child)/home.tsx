@@ -19,6 +19,7 @@ import AppBlockerModule from '@/modules/android/AppBlockerModule';
 import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
 import { getTodayApprovedExtraMinutes } from '@/services/permissionRequestService';
+import { getTasks, updateTaskStatus, getTodayCompletedTaskMinutes, RewardTask } from '@/services/rewardTaskService';
 import { isSetupComplete } from '@/app/(child)/setup';
 import { useRouter } from 'expo-router';
 
@@ -59,6 +60,7 @@ export default function ChildHomeScreen() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [extraMinutes, setExtraMinutes] = useState<Record<string, number>>({});
+  const [rewardTasks, setRewardTasks] = useState<RewardTask[]>([]);
 
   const child = children.find((c) => c.id === selectedChildId);
   const today = new Date().toISOString().slice(0, 10);
@@ -66,18 +68,26 @@ export default function ChildHomeScreen() {
   const load = async () => {
     if (!selectedChildId) return;
     try {
-      const [rules, schedules, usage, apps, approvedMins] = await Promise.all([
+      const [rules, schedules, usage, apps, approvedMins, completedTaskMins, fetchedTasks] = await Promise.all([
         getRules(selectedChildId),
         getSchedules(selectedChildId),
         getDailyUsage(selectedChildId, today),
         getInstalledApps(selectedChildId),
         getTodayApprovedExtraMinutes(selectedChildId),
+        getTodayCompletedTaskMinutes(selectedChildId),
+        getTasks(selectedChildId)
       ]);
       setActiveRules(rules ?? []);
       setActiveSchedules(schedules ?? []);
       setUsageData(usage ?? []);
       setInstalledApps(apps ?? []);
-      setExtraMinutes(approvedMins);
+      
+      const combinedMins = { ...approvedMins };
+      for (const [appId, mins] of Object.entries(completedTaskMins)) {
+        combinedMins[appId] = (combinedMins[appId] || 0) + mins;
+      }
+      setExtraMinutes(combinedMins);
+      setRewardTasks(fetchedTasks ?? []);
     } finally {
       setRefreshing(false);
     }
@@ -136,6 +146,18 @@ export default function ChildHomeScreen() {
         () => {
           // If usage changes (from background agent), reload UI
           load(); 
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reward_tasks',
+          filter: `child_id=eq.${selectedChildId}`,
+        },
+        () => {
+          load(); // Reload tasks and extra time
         }
       )
       .subscribe();
@@ -691,6 +713,89 @@ export default function ChildHomeScreen() {
                 >
                   <Text style={{ color: '#9B8FF7', fontWeight: '600', fontSize: 12 }}>Unlock</Text>
                 </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ── Tasks & Rewards ─────────────────────────────── */}
+        {rewardTasks.length > 0 && (
+          <View className="px-5 mb-2 mt-4">
+            <Text
+              style={{ color: '#9090A8', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}
+            >
+              TASKS & REWARDS
+            </Text>
+            {rewardTasks.map((task) => (
+              <View
+                key={task.id}
+                style={{
+                  backgroundColor: '#1A1730',
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: task.status === 'awaiting_approval' ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.07)',
+                  padding: 14,
+                  marginBottom: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    backgroundColor: 'rgba(124,106,245,0.12)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Text style={{ fontSize: 22 }}>🎁</Text>
+                </View>
+                  <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#E8E8F0', fontWeight: '600', fontSize: 14, textDecorationLine: task.status === 'completed' ? 'line-through' : 'none' }}>{task.title}</Text>
+                  <Text style={{ color: '#7C6AF5', fontSize: 12, marginTop: 2, fontWeight: '600' }}>
+                    Reward: {task.reward_minutes} min {task.installed_apps ? `for ${task.installed_apps.app_name}` : 'for any app'}
+                  </Text>
+                  {task.status === 'awaiting_approval' && (
+                    <Text style={{ color: '#F59E0B', fontSize: 11, marginTop: 4 }}>⏳ Waiting for parent</Text>
+                  )}
+                  {task.status === 'completed' && (
+                    <Text style={{ color: '#22C55E', fontSize: 11, marginTop: 4 }}>✅ Completed today</Text>
+                  )}
+                </View>
+                
+                {task.status === 'pending' && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        await updateTaskStatus(task.id, 'awaiting_approval');
+                        const res = await supabase.from('families').select('id').single();
+                        if (res.data) {
+                          await supabase.from('notifications_log').insert({
+                            family_id: res.data.id,
+                            type: 'task_done',
+                            title: 'Task needs approval',
+                            body: `${childName} marked "${task.title}" as done.`,
+                            target_role: 'parent'
+                          });
+                        }
+                        await load();
+                      } catch(e) {}
+                    }}
+                    style={{
+                      backgroundColor: 'rgba(124,106,245,0.15)',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(124,106,245,0.3)',
+                    }}
+                  >
+                    <Text style={{ color: '#9B8FF7', fontWeight: '600', fontSize: 12 }}>Mark Done</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </View>
