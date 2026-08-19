@@ -180,6 +180,34 @@ export async function getTopAppsForPeriod(
 }
 
 /**
+ * Returns a map of appId → total usage minutes over the rolling last 7 days.
+ * Used to check weekly budget enforcement and render weekly progress bars.
+ */
+export async function getWeeklyUsageByApp(
+  childId: string
+): Promise<Record<string, number>> {
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0];
+
+  const { data, error } = await supabase
+    .from('app_usage_logs')
+    .select('app_id, usage_minutes')
+    .eq('child_id', childId)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (error) throw error;
+
+  const result: Record<string, number> = {};
+  for (const row of data ?? []) {
+    result[row.app_id] = (result[row.app_id] ?? 0) + row.usage_minutes;
+  }
+  return result;
+}
+
+/**
  * Fetches the parent activity audit log for a family, most recent first.
  */
 export async function getAuditLog(

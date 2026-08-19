@@ -120,7 +120,12 @@ export default function RulesScreen() {
                     <Text className="text-text-primary font-semibold">
                       {r.installed_apps?.app_name ?? r.category ?? 'All Apps'}
                     </Text>
-                    <Text className="text-warning text-sm">{formatMinutes(r.daily_limit_minutes)} / day</Text>
+                    <Text className="text-warning text-sm">⏱ {formatMinutes(r.daily_limit_minutes)} / day</Text>
+                    {r.weekly_limit_minutes != null && (
+                      <Text style={{ color: '#818CF8', fontSize: 12, marginTop: 2 }}>
+                        📅 {formatMinutes(r.weekly_limit_minutes)} / week
+                      </Text>
+                    )}
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => setRuleToDelete({ id: r.id, type: 'time' })}>
@@ -128,6 +133,7 @@ export default function RulesScreen() {
                 </TouchableOpacity>
               </View>
             ))}
+
 
             {/* Block Rules */}
             <SectionHeader 

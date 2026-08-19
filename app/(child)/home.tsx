@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAgentStore } from '@/store/agentStore';
 import { useFamilyStore } from '@/store/familyStore';
 import { getRules } from '@/services/ruleService';
+import { getWeeklyUsageByApp } from '@/services/reportService';
 import { getSchedules } from '@/services/scheduleService';
 import { getDailyUsage, getInstalledApps, UsageLog, InstalledApp } from '@/services/usageService';
 import { supabase } from '@/services/supabase';
@@ -60,6 +61,7 @@ export default function ChildHomeScreen() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [extraMinutes, setExtraMinutes] = useState<Record<string, number>>({});
+  const [weeklyUsage, setWeeklyUsage] = useState<Record<string, number>>({});
   const [rewardTasks, setRewardTasks] = useState<RewardTask[]>([]);
 
   const child = children.find((c) => c.id === selectedChildId);
@@ -68,19 +70,21 @@ export default function ChildHomeScreen() {
   const load = async () => {
     if (!selectedChildId) return;
     try {
-      const [rules, schedules, usage, apps, approvedMins, completedTaskMins, fetchedTasks] = await Promise.all([
+      const [rules, schedules, usage, apps, approvedMins, completedTaskMins, fetchedTasks, weeklyByApp] = await Promise.all([
         getRules(selectedChildId),
         getSchedules(selectedChildId),
         getDailyUsage(selectedChildId, today),
         getInstalledApps(selectedChildId),
         getTodayApprovedExtraMinutes(selectedChildId),
         getTodayCompletedTaskMinutes(selectedChildId),
-        getTasks(selectedChildId)
+        getTasks(selectedChildId),
+        getWeeklyUsageByApp(selectedChildId),
       ]);
       setActiveRules(rules ?? []);
       setActiveSchedules(schedules ?? []);
       setUsageData(usage ?? []);
       setInstalledApps(apps ?? []);
+      setWeeklyUsage(weeklyByApp ?? {});
       
       const combinedMins = { ...approvedMins };
       for (const [appId, mins] of Object.entries(completedTaskMins)) {
@@ -188,18 +192,19 @@ export default function ChildHomeScreen() {
       const blockRule = activeRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'BLOCK');
       if (blockRule) isBlocked = true;
 
-      // 2. Evaluate Time Limits
+      // 2. Evaluate Time Limits (daily + weekly, stacked independently)
       if (!isBlocked) {
         const timeRule = activeRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'TIME_LIMIT');
         if (timeRule) {
           const usage = usageData.find((u) => u.app_id === appId);
           const usedMinutes = usage?.usage_minutes ?? 0;
           const appExtra = (extraMinutes[appId] || 0) + (extraMinutes['any'] || 0);
-          const limit = (timeRule.daily_limit_minutes ?? 0) + appExtra;
-          
-          if (limit > 0 && usedMinutes >= limit) {
+          const dailyLimit = (timeRule.daily_limit_minutes ?? 0) + appExtra;
+
+          // Daily limit check
+          if (dailyLimit > 0 && usedMinutes >= dailyLimit) {
             isBlocked = true;
-          } else if (limit > 0 && (limit - usedMinutes) === 10) {
+          } else if (dailyLimit > 0 && (dailyLimit - usedMinutes) === 10) {
             if (!warnedApps.current.has(appId)) {
                Notifications.scheduleNotificationAsync({
                  content: {
@@ -209,6 +214,14 @@ export default function ChildHomeScreen() {
                  trigger: null,
                });
                warnedApps.current.add(appId);
+            }
+          }
+
+          // Weekly limit check (stacked on top of daily)
+          if (!isBlocked && timeRule.weekly_limit_minutes) {
+            const weeklyUsed = weeklyUsage[appId] ?? 0;
+            if (weeklyUsed >= timeRule.weekly_limit_minutes) {
+              isBlocked = true;
             }
           }
         }
@@ -312,6 +325,8 @@ export default function ChildHomeScreen() {
           app_name: appInfo?.app_name ?? 'App',
           usage_minutes: usage?.usage_minutes ?? 0,
           daily_limit_minutes: (r.daily_limit_minutes ?? 0) + appExtra,
+          weekly_limit_minutes: r.weekly_limit_minutes ?? null,
+          weekly_usage_minutes: weeklyUsage[r.app_id] ?? 0,
         }];
       } else if (r.category) {
         // Expand category rule to all matching apps
@@ -325,6 +340,8 @@ export default function ChildHomeScreen() {
               app_name: appInfo.app_name,
               usage_minutes: usage?.usage_minutes ?? 0,
               daily_limit_minutes: (r.daily_limit_minutes ?? 0) + appExtra,
+              weekly_limit_minutes: r.weekly_limit_minutes ?? null,
+              weekly_usage_minutes: weeklyUsage[appInfo.id] ?? 0,
             };
           });
       }
@@ -625,6 +642,39 @@ export default function ChildHomeScreen() {
                     <Text style={{ color: '#9090A8', fontSize: 11 }}>
                       {formatMinutes(used)} used · {formatMinutes(limit)} limit
                     </Text>
+
+                    {/* Weekly budget bar */}
+                    {item.weekly_limit_minutes != null && (
+                      <>
+                        <View
+                          style={{
+                            height: 4,
+                            backgroundColor: 'rgba(255,255,255,0.06)',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            marginTop: 8,
+                            marginBottom: 3,
+                          }}
+                        >
+                          <View
+                            style={{
+                              height: 4,
+                              width: `${Math.min((item.weekly_usage_minutes / item.weekly_limit_minutes) * 100, 100)}%`,
+                              backgroundColor:
+                                item.weekly_usage_minutes >= item.weekly_limit_minutes
+                                  ? '#EF4444'
+                                  : item.weekly_usage_minutes / item.weekly_limit_minutes >= 0.75
+                                  ? '#F59E0B'
+                                  : '#818CF8',
+                              borderRadius: 2,
+                            }}
+                          />
+                        </View>
+                        <Text style={{ color: '#9090A8', fontSize: 10 }}>
+                          📅 {formatMinutes(item.weekly_usage_minutes)} this week · {formatMinutes(item.weekly_limit_minutes)} weekly limit
+                        </Text>
+                      </>
+                    )}
                   </View>
                 </View>
               );

@@ -19,6 +19,8 @@ export default function CreateTimeLimitScreen() {
   const { selectedChildId } = useFamilyStore();
 
   const [limitMins, setLimitMins]   = useState(60);
+  const [weeklyEnabled, setWeeklyEnabled] = useState(false);
+  const [weeklyLimitMins, setWeeklyLimitMins] = useState(300);
   const [mode, setMode]             = useState<'app' | 'category'>('app');
   const [appId, setAppId]           = useState<string | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<AppCategory | undefined>();
@@ -40,11 +42,22 @@ export default function CreateTimeLimitScreen() {
 
   const handleSave = async () => {
     if (!selectedChildId) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'No child selected.' }); return; }
+    if (weeklyEnabled && weeklyLimitMins < limitMins) {
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Weekly limit must be ≥ daily limit.' });
+      return;
+    }
     setLoading(true);
     try {
       const appIdParam = mode === 'app' ? appId : undefined;
       const categoryParam = mode === 'category' ? selectedCategory : undefined;
-      await createRule(selectedChildId, 'TIME_LIMIT', appIdParam, categoryParam, limitMins);
+      await createRule(
+        selectedChildId,
+        'TIME_LIMIT',
+        appIdParam,
+        categoryParam,
+        limitMins,
+        weeklyEnabled ? weeklyLimitMins : undefined,
+      );
       Toast.show({ type: 'success', text1: 'Time Limit Created', text2: `Set to ${formatMinutes(limitMins)}.` });
       router.back();
     } catch (e: any) {
@@ -87,6 +100,65 @@ export default function CreateTimeLimitScreen() {
             <Text className="text-text-muted text-xs">5 min</Text>
             <Text className="text-text-muted text-xs">8 hours</Text>
           </View>
+        </View>
+
+        {/* Weekly budget toggle */}
+        <View className="bg-bg-card rounded-2xl p-5 border border-border mb-5">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: weeklyEnabled ? 16 : 0 }}>
+            <View>
+              <Text className="text-text-primary font-semibold text-sm">📅 Weekly budget</Text>
+              <Text className="text-text-muted text-xs mt-0.5">Cap total usage across the week</Text>
+            </View>
+            <TouchableOpacity
+              id="toggle-weekly-budget"
+              onPress={() => setWeeklyEnabled((v) => !v)}
+              style={{
+                width: 48,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: weeklyEnabled ? '#7C6AF5' : 'rgba(255,255,255,0.1)',
+                justifyContent: 'center',
+                paddingHorizontal: 3,
+              }}
+            >
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  backgroundColor: '#fff',
+                  alignSelf: weeklyEnabled ? 'flex-end' : 'flex-start',
+                }}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {weeklyEnabled && (
+            <>
+              <Text className="text-text-muted text-sm mb-1">Weekly limit</Text>
+              <Text className="text-accent text-3xl font-bold mb-4">{formatMinutes(weeklyLimitMins)}</Text>
+              <Slider
+                style={{ width: '100%', height: 40 }}
+                minimumValue={30}
+                maximumValue={3360}
+                step={30}
+                value={weeklyLimitMins}
+                onValueChange={setWeeklyLimitMins}
+                minimumTrackTintColor="#818CF8"
+                maximumTrackTintColor="#2A2A3E"
+                thumbTintColor="#818CF8"
+              />
+              <View className="flex-row justify-between mt-1">
+                <Text className="text-text-muted text-xs">30 min</Text>
+                <Text className="text-text-muted text-xs">56 hours</Text>
+              </View>
+              {weeklyLimitMins < limitMins && (
+                <Text style={{ color: '#F59E0B', fontSize: 11, marginTop: 8 }}>
+                  ⚠️ Weekly limit should be at least as large as the daily limit.
+                </Text>
+              )}
+            </>
+          )}
         </View>
 
         {/* App selector */}

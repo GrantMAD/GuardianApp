@@ -30,7 +30,8 @@ export async function createRule(
   ruleType: 'TIME_LIMIT' | 'BLOCK' | 'ALLOW_ONLY',
   appId?: string,
   category?: AppCategory,
-  dailyLimitMinutes?: number
+  dailyLimitMinutes?: number,
+  weeklyLimitMinutes?: number
 ) {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) throw new Error('Not authenticated');
@@ -43,6 +44,7 @@ export async function createRule(
       app_id: appId || null,
       category: category || null,
       daily_limit_minutes: dailyLimitMinutes || null,
+      weekly_limit_minutes: weeklyLimitMinutes || null,
       created_by: user.user.id,
     })
     .select()
@@ -60,7 +62,9 @@ export async function createRule(
          if (app?.app_name) targetName = app.app_name;
       }
       const ruleTypeName = ruleType === 'BLOCK' ? 'block' : 'time limit';
-      const detail = ruleType === 'TIME_LIMIT' ? ` of ${dailyLimitMinutes} minutes` : '';
+      const dailyDetail = ruleType === 'TIME_LIMIT' && dailyLimitMinutes ? ` of ${dailyLimitMinutes} min/day` : '';
+      const weeklyDetail = ruleType === 'TIME_LIMIT' && weeklyLimitMinutes ? `, ${weeklyLimitMinutes} min/week` : '';
+      const detail = `${dailyDetail}${weeklyDetail}`;
       await logParentAction(
         child.family_id,
         'RULE_CREATED',
