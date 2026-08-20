@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StatusBar,
   ActivityIndicator, TextInput,
@@ -13,6 +13,7 @@ import { formatMinutes } from '@/utils/formatTime';
 import { APP_CATEGORIES, AppCategory } from '@/constants/categories';
 import Toast from 'react-native-toast-message';
 import BackButton from '@/components/ui/BackButton';
+import { getLocationProfiles, LocationProfile } from '@/services/locationProfileService';
 
 export default function CreateTimeLimitScreen() {
   const router = useRouter();
@@ -28,6 +29,14 @@ export default function CreateTimeLimitScreen() {
   const [appSearch, setAppSearch]   = useState('');
   const [loading, setLoading]       = useState(false);
   const [appsLoading, setAppsLoading] = useState(false);
+  const [locationProfiles, setLocationProfiles] = useState<LocationProfile[]>([]);
+  const [locationProfileId, setLocationProfileId] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (selectedChildId) {
+      getLocationProfiles(selectedChildId).then(setLocationProfiles).catch(() => {});
+    }
+  }, [selectedChildId]);
 
   const loadApps = async () => {
     if (!selectedChildId || apps.length > 0) return;
@@ -57,6 +66,7 @@ export default function CreateTimeLimitScreen() {
         categoryParam,
         limitMins,
         weeklyEnabled ? weeklyLimitMins : undefined,
+        locationProfileId,
       );
       Toast.show({ type: 'success', text1: 'Time Limit Created', text2: `Set to ${formatMinutes(limitMins)}.` });
       router.back();
@@ -228,6 +238,52 @@ export default function CreateTimeLimitScreen() {
               </TouchableOpacity>
             ))}
           </>
+        )}
+
+        {/* Location scope */}
+        {locationProfiles.length > 0 && (
+          <View style={{ marginTop: 16, marginBottom: 4 }}>
+            <Text style={{ color: '#9090A8', fontSize: 13, fontWeight: '600', marginBottom: 8 }}>
+              📍 Apply only at location (optional)
+            </Text>
+            <TouchableOpacity
+              onPress={() => setLocationProfileId(undefined)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 12,
+                borderWidth: 1,
+                marginBottom: 6,
+                backgroundColor: !locationProfileId ? 'rgba(124,106,245,0.1)' : '#1A1A2E',
+                borderColor: !locationProfileId ? 'rgba(124,106,245,0.4)' : '#2A2A3E',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{ color: !locationProfileId ? '#7C6AF5' : '#9090A8' }}>🌍 Everywhere (global)</Text>
+              {!locationProfileId && <Text style={{ color: '#7C6AF5' }}>✓</Text>}
+            </TouchableOpacity>
+            {locationProfiles.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => setLocationProfileId(locationProfileId === p.id ? undefined : p.id)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  marginBottom: 6,
+                  backgroundColor: locationProfileId === p.id ? 'rgba(74,222,128,0.08)' : '#1A1A2E',
+                  borderColor: locationProfileId === p.id ? 'rgba(74,222,128,0.3)' : '#2A2A3E',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ color: locationProfileId === p.id ? '#4ADE80' : '#9090A8' }}>📍 {p.name}</Text>
+                {locationProfileId === p.id && <Text style={{ color: '#4ADE80' }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
 
         <TouchableOpacity

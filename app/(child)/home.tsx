@@ -23,6 +23,10 @@ import { getTodayApprovedExtraMinutes } from '@/services/permissionRequestServic
 import { getTasks, updateTaskStatus, getTodayCompletedTaskMinutes, RewardTask } from '@/services/rewardTaskService';
 import { isSetupComplete } from '@/app/(child)/setup';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocationProfiles, resolveActiveProfile, LocationProfile } from '@/services/locationProfileService';
+import { LocationConsentBanner } from '@/components/ui/LocationConsentBanner';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -64,6 +68,12 @@ export default function ChildHomeScreen() {
   const [weeklyUsage, setWeeklyUsage] = useState<Record<string, number>>({});
   const [rewardTasks, setRewardTasks] = useState<RewardTask[]>([]);
 
+  // Location awareness
+  const [locationProfiles, setLocationProfiles] = useState<LocationProfile[]>([]);
+  const [activeLocationProfileId, setActiveLocationProfileId] = useState<string | null>(null);
+  const [showLocationConsent, setShowLocationConsent] = useState(false);
+  const locationInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const child = children.find((c) => c.id === selectedChildId);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -98,6 +108,71 @@ export default function ChildHomeScreen() {
   };
 
   useEffect(() => { load(); }, [selectedChildId]);
+
+  // Load location profiles whenever child changes
+  useEffect(() => {
+    if (!selectedChildId || Platform.OS !== 'android') return;
+    getLocationProfiles(selectedChildId)
+      .then(setLocationProfiles)
+      .catch(() => {});
+  }, [selectedChildId]);
+
+  // One-time consent + location polling setup
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !selectedChildId) return;
+
+    const initLocation = async () => {
+      const consentGiven = await AsyncStorage.getItem('location_consent_given');
+      if (consentGiven === 'declined') return;
+      if (consentGiven !== 'accepted') {
+        // Show consent banner only when there are active location profiles
+        const profiles = await getLocationProfiles(selectedChildId);
+        if (profiles.length > 0) setShowLocationConsent(true);
+        return;
+      }
+      // Permission already granted — start polling
+      startLocationPolling();
+    };
+
+    initLocation();
+
+    return () => {
+      if (locationInterval.current) clearInterval(locationInterval.current);
+    };
+  }, [selectedChildId]);
+
+  const startLocationPolling = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+    // Also request background for more accurate geofencing
+    await Location.requestBackgroundPermissionsAsync();
+
+    const poll = async () => {
+      try {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const profiles = await getLocationProfiles(selectedChildId!);
+        setLocationProfiles(profiles);
+        const matched = resolveActiveProfile(profiles, pos.coords.latitude, pos.coords.longitude);
+        setActiveLocationProfileId(matched);
+      } catch {
+        // Silently fail — fall back to global rules
+      }
+    };
+
+    poll(); // immediate first run
+    locationInterval.current = setInterval(poll, 5 * 60 * 1000); // every 5 minutes
+  };
+
+  const handleLocationConsentAccept = async () => {
+    setShowLocationConsent(false);
+    await AsyncStorage.setItem('location_consent_given', 'accepted');
+    startLocationPolling();
+  };
+
+  const handleLocationConsentDecline = async () => {
+    setShowLocationConsent(false);
+    await AsyncStorage.setItem('location_consent_given', 'declined');
+  };
 
   // Sync & Realtime listener
   useEffect(() => {
@@ -184,17 +259,26 @@ export default function ChildHomeScreen() {
 
     const currentlyBlockedPackages = new Set<string>();
 
+    // Filter rules by active location profile:
+    // - Rules with null location_profile_id are global (always apply)
+    // - Rules with a specific location_profile_id only apply when that profile is active
+    const effectiveRules = activeRules.filter((r) =>
+      r.location_profile_id === null || r.location_profile_id === undefined
+        ? true
+        : r.location_profile_id === activeLocationProfileId
+    );
+
     installedApps.forEach((app) => {
       const { id: appId, package_name: packageName, category } = app;
       let isBlocked = false;
 
       // 1. Evaluate Manual Blocks
-      const blockRule = activeRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'BLOCK');
+      const blockRule = effectiveRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'BLOCK');
       if (blockRule) isBlocked = true;
 
       // 2. Evaluate Time Limits (daily + weekly, stacked independently)
       if (!isBlocked) {
-        const timeRule = activeRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'TIME_LIMIT');
+        const timeRule = effectiveRules.find((r) => (r.app_id === appId || (r.category === category && !r.app_id)) && r.rule_type === 'TIME_LIMIT');
         if (timeRule) {
           const usage = usageData.find((u) => u.app_id === appId);
           const usedMinutes = usage?.usage_minutes ?? 0;
@@ -261,7 +345,7 @@ export default function ChildHomeScreen() {
 
   useEffect(() => {
     enforceBlocks();
-  }, [activeRules, activeSchedules, usageData, installedApps, extraMinutes]);
+  }, [activeRules, activeSchedules, usageData, installedApps, extraMinutes, activeLocationProfileId]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -405,6 +489,13 @@ export default function ChildHomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0F0F14' }}>
       <StatusBar barStyle="light-content" backgroundColor="#0F0F14" />
+
+      {showLocationConsent && (
+        <LocationConsentBanner
+          onAccept={handleLocationConsentAccept}
+          onDecline={handleLocationConsentDecline}
+        />
+      )}
 
       <ScrollView
         className="flex-1"

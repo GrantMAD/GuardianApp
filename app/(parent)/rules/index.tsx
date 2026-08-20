@@ -6,8 +6,8 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamilyStore } from '@/store/familyStore';
 import { getRules, deleteRule } from '@/services/ruleService';
+import { getLocationProfiles, LocationProfile } from '@/services/locationProfileService';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { formatMinutes } from '@/utils/formatTime';
@@ -19,8 +19,13 @@ export default function RulesScreen() {
   const [rules, setRules]   = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ruleToDelete, setRuleToDelete] = useState<{ id: string, type: 'time' | 'block' } | null>(null);
+  const [locationProfiles, setLocationProfiles] = useState<LocationProfile[]>([]);
 
   const selectedChild = children.find((c) => c.id === selectedChildId);
+
+  /** Find the display name of a location profile by id */
+  const locationName = (id: string | null) =>
+    id ? (locationProfiles.find((p) => p.id === id)?.name ?? '📍 Location') : null;
 
   /** Resolves the best available icon URI for a rule row */
   function resolveIcon(r: any): string | null {
@@ -47,8 +52,12 @@ export default function RulesScreen() {
     if (!selectedChildId) return;
     setLoading(true);
     try {
-      const data = await getRules(selectedChildId);
+      const [data, profiles] = await Promise.all([
+        getRules(selectedChildId),
+        getLocationProfiles(selectedChildId),
+      ]);
       setRules(data);
+      setLocationProfiles(profiles);
     } finally {
       setLoading(false);
     }
@@ -69,7 +78,7 @@ export default function RulesScreen() {
         )}
 
         {/* Create buttons */}
-        <View className="flex-row gap-x-3 mb-2">
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
           <TouchableOpacity
             id="btn-create-limit"
             onPress={() => router.push('/(parent)/rules/create-limit')}
@@ -95,6 +104,35 @@ export default function RulesScreen() {
             <Text className="text-text-primary font-semibold text-sm">Schedules</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Locations shortcut */}
+        <TouchableOpacity
+          id="btn-locations"
+          onPress={() => router.push('/(parent)/locations')}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(34,197,94,0.08)',
+            borderWidth: 1,
+            borderColor: 'rgba(34,197,94,0.2)',
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            marginBottom: 12,
+            gap: 8,
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>📍</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#4ADE80', fontWeight: '700', fontSize: 13 }}>Location Profiles</Text>
+            <Text style={{ color: '#9090A8', fontSize: 11 }}>
+              {locationProfiles.length === 0
+                ? 'Set up location-based rules'
+                : `${locationProfiles.length} location${locationProfiles.length !== 1 ? 's' : ''} configured`}
+            </Text>
+          </View>
+          <Text style={{ color: '#9090A8' }}>›</Text>
+        </TouchableOpacity>
 
         {loading ? (
           <View className="mt-8 gap-y-3">
@@ -126,6 +164,11 @@ export default function RulesScreen() {
                         📅 {formatMinutes(r.weekly_limit_minutes)} / week
                       </Text>
                     )}
+                    {locationName(r.location_profile_id) && (
+                      <Text style={{ color: '#4ADE80', fontSize: 11, marginTop: 2 }}>
+                        📍 {locationName(r.location_profile_id)}
+                      </Text>
+                    )}
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => setRuleToDelete({ id: r.id, type: 'time' })}>
@@ -152,6 +195,11 @@ export default function RulesScreen() {
                       {r.installed_apps?.app_name ?? r.category ?? 'All Apps'}
                     </Text>
                     <Text className="text-danger text-sm">Blocked</Text>
+                    {locationName(r.location_profile_id) && (
+                      <Text style={{ color: '#4ADE80', fontSize: 11, marginTop: 2 }}>
+                        📍 {locationName(r.location_profile_id)}
+                      </Text>
+                    )}
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => setRuleToDelete({ id: r.id, type: 'block' })}>

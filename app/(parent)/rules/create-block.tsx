@@ -11,6 +11,7 @@ import { getInstalledApps } from '@/services/usageService';
 import { APP_CATEGORIES, AppCategory } from '@/constants/categories';
 import Toast from 'react-native-toast-message';
 import BackButton from '@/components/ui/BackButton';
+import { getLocationProfiles, LocationProfile } from '@/services/locationProfileService';
 
 export default function CreateBlockRuleScreen() {
   const router = useRouter();
@@ -23,6 +24,8 @@ export default function CreateBlockRuleScreen() {
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(false);
   const [appsLoaded, setAppsLoaded] = useState(false);
+  const [locationProfiles, setLocationProfiles] = useState<LocationProfile[]>([]);
+  const [locationProfileId, setLocationProfileId] = useState<string | undefined>();
 
   const loadApps = async () => {
     if (!selectedChildId || appsLoaded) return;
@@ -33,7 +36,12 @@ export default function CreateBlockRuleScreen() {
     } catch {}
   };
 
-  useEffect(() => { loadApps(); }, []);
+  useEffect(() => {
+    loadApps();
+    if (selectedChildId) {
+      getLocationProfiles(selectedChildId).then(setLocationProfiles).catch(() => {});
+    }
+  }, []);
 
   const handleSave = async () => {
     if (!selectedChildId) { Toast.show({ type: 'error', text1: 'Validation Error', text2: 'No child selected.' }); return; }
@@ -41,7 +49,7 @@ export default function CreateBlockRuleScreen() {
     try {
       const appIdParam = mode === 'app' ? selectedId : undefined;
       const categoryParam = mode === 'category' ? selectedCategory : undefined;
-      await createRule(selectedChildId, 'BLOCK', appIdParam, categoryParam);
+      await createRule(selectedChildId, 'BLOCK', appIdParam, categoryParam, undefined, undefined, locationProfileId);
       
       const successText = mode === 'category' && selectedCategory 
         ? `Category blocked.` 
@@ -145,6 +153,52 @@ export default function CreateBlockRuleScreen() {
               </TouchableOpacity>
             ))}
           </>
+        )}
+
+        {/* Location scope */}
+        {locationProfiles.length > 0 && (
+          <View style={{ marginHorizontal: 0, marginTop: 16, marginBottom: 4 }}>
+            <Text style={{ color: '#9090A8', fontSize: 13, fontWeight: '600', marginBottom: 8 }}>
+              📍 Apply only at location (optional)
+            </Text>
+            <TouchableOpacity
+              onPress={() => setLocationProfileId(undefined)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 12,
+                borderWidth: 1,
+                marginBottom: 6,
+                backgroundColor: !locationProfileId ? 'rgba(124,106,245,0.1)' : '#1A1A2E',
+                borderColor: !locationProfileId ? 'rgba(124,106,245,0.4)' : '#2A2A3E',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{ color: !locationProfileId ? '#7C6AF5' : '#9090A8' }}>🌍 Everywhere (global)</Text>
+              {!locationProfileId && <Text style={{ color: '#7C6AF5' }}>✓</Text>}
+            </TouchableOpacity>
+            {locationProfiles.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => setLocationProfileId(locationProfileId === p.id ? undefined : p.id)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  marginBottom: 6,
+                  backgroundColor: locationProfileId === p.id ? 'rgba(74,222,128,0.08)' : '#1A1A2E',
+                  borderColor: locationProfileId === p.id ? 'rgba(74,222,128,0.3)' : '#2A2A3E',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ color: locationProfileId === p.id ? '#4ADE80' : '#9090A8' }}>📍 {p.name}</Text>
+                {locationProfileId === p.id && <Text style={{ color: '#4ADE80' }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
 
         <TouchableOpacity

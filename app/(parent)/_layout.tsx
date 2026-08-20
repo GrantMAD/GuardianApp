@@ -103,6 +103,7 @@ export default function ParentLayout() {
       <Tabs.Screen name="rules/schedules/create" options={{ href: null }} />
 
       <Tabs.Screen name="apps/[appId]" options={{ href: null }} />
+      <Tabs.Screen name="locations" options={{ href: null }} />
     </Tabs>
   );
 }

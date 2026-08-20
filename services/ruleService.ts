@@ -10,6 +10,7 @@ export interface Rule {
   rule_type: 'TIME_LIMIT' | 'BLOCK' | 'ALLOW_ONLY';
   daily_limit_minutes: number | null;
   weekly_limit_minutes: number | null;
+  location_profile_id: string | null;
   is_active: boolean;
   installed_apps: { app_name: string; icon_url: string | null; package_name: string } | null;
 }
@@ -31,7 +32,8 @@ export async function createRule(
   appId?: string,
   category?: AppCategory,
   dailyLimitMinutes?: number,
-  weeklyLimitMinutes?: number
+  weeklyLimitMinutes?: number,
+  locationProfileId?: string
 ) {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) throw new Error('Not authenticated');
@@ -45,6 +47,7 @@ export async function createRule(
       category: category || null,
       daily_limit_minutes: dailyLimitMinutes || null,
       weekly_limit_minutes: weeklyLimitMinutes || null,
+      location_profile_id: locationProfileId || null,
       created_by: user.user.id,
     })
     .select()
