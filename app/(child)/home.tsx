@@ -246,6 +246,7 @@ export default function ChildHomeScreen() {
       import('@/services/usageService').then(({ syncUsageStats }) => {
         syncUsageStats(selectedChildId); // just sync to DB, let realtime trigger UI reload if needed
       });
+      enforceBlocks(); // Re-evaluate in case emergency override expired
     }, 60000);
 
     return () => {
@@ -254,8 +255,23 @@ export default function ChildHomeScreen() {
     };
   }, [selectedChildId]);
 
-  const enforceBlocks = () => {
+  const enforceBlocks = async () => {
     if (!installedApps.length || !selectedChildId) return;
+
+    // Check emergency override
+    const overrideStr = await AsyncStorage.getItem('emergency_override_until');
+    if (overrideStr) {
+      const overrideUntil = parseInt(overrideStr, 10);
+      if (Date.now() < overrideUntil) {
+        // Currently overridden. Unblock everything.
+        const prevBlocked = previouslyBlockedPackages.current;
+        for (const pkg of prevBlocked) {
+          AppBlockerModule.unblockApp(pkg);
+        }
+        previouslyBlockedPackages.current = new Set();
+        return; // Skip normal block enforcement
+      }
+    }
 
     const currentlyBlockedPackages = new Set<string>();
 

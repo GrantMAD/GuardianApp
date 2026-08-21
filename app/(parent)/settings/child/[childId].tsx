@@ -13,6 +13,7 @@ import { generatePairingCode } from '@/services/pairingService';
 import { ChildAvatar } from '@/components/ui/ChildAvatar';
 import Toast from 'react-native-toast-message';
 import BackButton from '@/components/ui/BackButton';
+import * as Crypto from 'expo-crypto';
 
 export default function ChildProfileScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
@@ -26,6 +27,8 @@ export default function ChildProfileScreen() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
   const [avatarLoading, setAvatarLoading]   = useState(false);
+  const [pin, setPin]                       = useState('');
+  const [pinSaving, setPinSaving]           = useState(false);
 
   const handlePickImage = async () => {
     try {
@@ -67,6 +70,28 @@ export default function ChildProfileScreen() {
       Toast.show({ type: 'error', text1: 'Save Failed', text2: e.message ?? 'Failed to save.' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSetPin = async () => {
+    if (!pin || pin.length !== 4 || isNaN(Number(pin))) {
+      Toast.show({ type: 'error', text1: 'Invalid PIN', text2: 'PIN must be exactly 4 digits.' });
+      return;
+    }
+    setPinSaving(true);
+    try {
+      const pinHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, pin);
+      await supabase.from('children').update({ emergency_pin_hash: pinHash }).eq('id', childId);
+      if (family) {
+        const updated = await getChildren(family.id);
+        setChildren(updated);
+      }
+      setPin('');
+      Toast.show({ type: 'success', text1: 'PIN Set', text2: 'Emergency override PIN updated.' });
+    } catch (e: any) {
+      Toast.show({ type: 'error', text1: 'Save Failed', text2: e.message ?? 'Failed to save PIN.' });
+    } finally {
+      setPinSaving(false);
     }
   };
 
@@ -185,6 +210,35 @@ export default function ChildProfileScreen() {
             {pairingLoading ? <ActivityIndicator color="#7C6AF5" /> : (
               <Text className="text-accent font-semibold text-sm">
                 {pairingCode ? 'Regenerate Code' : 'Generate Pairing Code'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Emergency PIN */}
+        <View className="bg-bg-card rounded-2xl p-4 border border-border mb-5">
+          <Text className="text-text-primary font-semibold mb-1">Emergency Override PIN</Text>
+          <Text className="text-text-muted text-xs mb-3">
+            Set a 4-digit PIN that your child can use to temporarily suspend restrictions in an emergency.
+          </Text>
+          <TextInput
+            keyboardType="number-pad"
+            maxLength={4}
+            placeholder="Enter 4-digit PIN"
+            placeholderTextColor="#808080"
+            secureTextEntry
+            value={pin}
+            onChangeText={setPin}
+            className="bg-bg-elevated border border-border rounded-xl px-4 py-3 text-text-primary text-base mb-3 text-center tracking-widest"
+          />
+          <TouchableOpacity
+            onPress={handleSetPin}
+            disabled={pinSaving || pin.length !== 4}
+            className={`rounded-xl py-3 items-center ${pin.length === 4 ? 'bg-accent' : 'bg-bg-elevated'}`}
+          >
+            {pinSaving ? <ActivityIndicator color="#fff" /> : (
+              <Text className={`${pin.length === 4 ? 'text-white' : 'text-text-muted'} font-semibold text-sm`}>
+                Save PIN
               </Text>
             )}
           </TouchableOpacity>

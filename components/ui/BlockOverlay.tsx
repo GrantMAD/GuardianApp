@@ -7,6 +7,7 @@ interface BlockOverlayProps {
   appName: string;
   reason: BlockReason;
   onRequestAccess?: () => void;
+  onEmergencyAccess?: () => void;
   resetTime?: string; // e.g. "resets at midnight"
 }
 
@@ -16,7 +17,7 @@ const REASON_MAP: Record<BlockReason, { title: string; subtitle: string; emoji: 
   schedule:         { emoji: '🕐', title: 'Restricted by schedule',   subtitle: 'This app is blocked during the current time window.' },
 };
 
-export function BlockOverlay({ appName, reason, onRequestAccess, resetTime }: BlockOverlayProps) {
+export function BlockOverlay({ appName, reason, onRequestAccess, onEmergencyAccess, resetTime }: BlockOverlayProps) {
   const info = REASON_MAP[reason];
 
   return (
@@ -47,9 +48,19 @@ export function BlockOverlay({ appName, reason, onRequestAccess, resetTime }: Bl
       {onRequestAccess && (
         <TouchableOpacity
           onPress={onRequestAccess}
-          className="bg-accent px-8 py-3.5 rounded-2xl"
+          className="bg-accent px-8 py-3.5 rounded-2xl mb-4 w-full items-center max-w-[280px]"
         >
           <Text className="text-white font-bold text-base">Ask Parent for Access</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Emergency access */}
+      {onEmergencyAccess && (
+        <TouchableOpacity
+          onPress={onEmergencyAccess}
+          className="border border-danger/40 bg-danger/10 px-8 py-3.5 rounded-2xl w-full items-center max-w-[280px]"
+        >
+          <Text className="text-danger font-bold text-sm">Emergency Override</Text>
         </TouchableOpacity>
       )}
     </View>
